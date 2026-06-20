@@ -18,6 +18,12 @@ node server.js
 
 ## 納品確認用の常時公開版
 
+公開URL:
+
+```text
+https://personalales-boop.github.io/fm-daishi-operations-app/
+```
+
 GitHub Pages では Node.js の `/api/*` が動かないため、アプリは自動で静的公開モードに切り替わります。
 
 - `お客様確認用 / PIN 2222` で閲覧できます
