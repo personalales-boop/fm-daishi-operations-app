@@ -1,0 +1,2850 @@
+{
+  "schedules": {
+    "draft": {
+      "2026-06": {
+        "2026-06-01": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        },
+        "2026-06-02": {
+          "morning": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "midday": [
+            "aoki",
+            "kaminaga"
+          ],
+          "evening": [
+            "sato_takashi",
+            "uruchida"
+          ]
+        },
+        "2026-06-03": {
+          "morning": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "midday": [
+            "madokawa",
+            "tazawa"
+          ],
+          "evening": [
+            "kaminaga",
+            "shimizu"
+          ]
+        },
+        "2026-06-04": {
+          "morning": [
+            "aoki",
+            "kaminaga"
+          ],
+          "midday": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "evening": [
+            "tazawa",
+            "suyama"
+          ]
+        },
+        "2026-06-05": {
+          "morning": [
+            "madokawa",
+            "tazawa"
+          ],
+          "midday": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "evening": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-06-06": {
+          "morning": [
+            "kaminaga",
+            "uruchida"
+          ],
+          "midday": [
+            "uruchida",
+            "suyama"
+          ],
+          "evening": [
+            "suyama",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-06-07": {
+          "morning": [
+            "tazawa"
+          ],
+          "midday": [
+            "shimizu"
+          ],
+          "evening": [
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-06-08": {
+          "morning": [
+            "tazawa",
+            "suyama"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ]
+        },
+        "2026-06-09": {
+          "morning": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "suyama",
+            "aoki"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ]
+        },
+        "2026-06-10": {
+          "morning": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "evening": [
+            "aoki",
+            "kaminaga"
+          ]
+        },
+        "2026-06-11": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        },
+        "2026-06-12": {
+          "morning": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "midday": [
+            "aoki",
+            "kaminaga"
+          ],
+          "evening": [
+            "sato_takashi",
+            "uruchida"
+          ]
+        },
+        "2026-06-13": {
+          "morning": [
+            "aoki",
+            "sato_takashi"
+          ],
+          "midday": [
+            "sato_takashi",
+            "tazawa"
+          ],
+          "evening": [
+            "tazawa",
+            "shimizu"
+          ]
+        },
+        "2026-06-14": {
+          "morning": [
+            "madokawa"
+          ],
+          "midday": [
+            "kaminaga"
+          ],
+          "evening": [
+            "uruchida"
+          ]
+        },
+        "2026-06-15": {
+          "morning": [
+            "madokawa",
+            "tazawa"
+          ],
+          "midday": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "evening": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-06-16": {
+          "morning": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "midday": [
+            "tazawa",
+            "suyama"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-06-17": {
+          "morning": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "midday": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "suyama",
+            "aoki"
+          ]
+        },
+        "2026-06-18": {
+          "morning": [
+            "tazawa",
+            "suyama"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ]
+        },
+        "2026-06-19": {
+          "morning": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "suyama",
+            "aoki"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ]
+        },
+        "2026-06-20": {
+          "morning": [
+            "suyama",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "madokawa"
+          ],
+          "evening": [
+            "madokawa",
+            "kaminaga"
+          ]
+        },
+        "2026-06-21": {
+          "morning": [
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "aoki"
+          ],
+          "evening": [
+            "sato_takashi"
+          ]
+        },
+        "2026-06-22": {
+          "morning": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "midday": [
+            "aoki",
+            "kaminaga"
+          ],
+          "evening": [
+            "sato_takashi",
+            "uruchida"
+          ]
+        },
+        "2026-06-23": {
+          "morning": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "midday": [
+            "madokawa",
+            "tazawa"
+          ],
+          "evening": [
+            "kaminaga",
+            "shimizu"
+          ]
+        },
+        "2026-06-24": {
+          "morning": [
+            "aoki",
+            "kaminaga"
+          ],
+          "midday": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "evening": [
+            "tazawa",
+            "suyama"
+          ]
+        },
+        "2026-06-25": {
+          "morning": [
+            "madokawa",
+            "tazawa"
+          ],
+          "midday": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "evening": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-06-26": {
+          "morning": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "midday": [
+            "tazawa",
+            "suyama"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-06-27": {
+          "morning": [
+            "tazawa",
+            "shimizu"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "aoki"
+          ]
+        },
+        "2026-06-28": {
+          "morning": [
+            "uruchida"
+          ],
+          "midday": [
+            "suyama"
+          ],
+          "evening": [
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-06-29": {
+          "morning": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "suyama",
+            "aoki"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ]
+        },
+        "2026-06-30": {
+          "morning": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "evening": [
+            "aoki",
+            "kaminaga"
+          ]
+        }
+      },
+      "2026-07": {
+        "2026-07-01": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        },
+        "2026-07-02": {
+          "morning": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "midday": [
+            "aoki",
+            "kaminaga"
+          ],
+          "evening": [
+            "sato_takashi",
+            "uruchida"
+          ]
+        },
+        "2026-07-03": {
+          "morning": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "midday": [
+            "madokawa",
+            "tazawa"
+          ],
+          "evening": [
+            "kaminaga",
+            "shimizu"
+          ]
+        },
+        "2026-07-04": {
+          "morning": [
+            "madokawa",
+            "kaminaga"
+          ],
+          "midday": [
+            "kaminaga",
+            "uruchida"
+          ],
+          "evening": [
+            "uruchida",
+            "suyama"
+          ]
+        },
+        "2026-07-05": {
+          "morning": [
+            "sato_takashi"
+          ],
+          "midday": [
+            "tazawa"
+          ],
+          "evening": [
+            "shimizu"
+          ]
+        },
+        "2026-07-06": {
+          "morning": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "midday": [
+            "tazawa",
+            "suyama"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-07-07": {
+          "morning": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "midday": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "suyama",
+            "aoki"
+          ]
+        },
+        "2026-07-08": {
+          "morning": [
+            "tazawa",
+            "suyama"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ]
+        },
+        "2026-07-09": {
+          "morning": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "suyama",
+            "aoki"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ]
+        },
+        "2026-07-10": {
+          "morning": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "evening": [
+            "aoki",
+            "kaminaga"
+          ]
+        },
+        "2026-07-11": {
+          "morning": [
+            "sakamoto_tadashi",
+            "aoki"
+          ],
+          "midday": [
+            "aoki",
+            "sato_takashi"
+          ],
+          "evening": [
+            "sato_takashi",
+            "tazawa"
+          ]
+        },
+        "2026-07-12": {
+          "morning": [
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "madokawa"
+          ],
+          "evening": [
+            "kaminaga"
+          ]
+        },
+        "2026-07-13": {
+          "morning": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "midday": [
+            "madokawa",
+            "tazawa"
+          ],
+          "evening": [
+            "kaminaga",
+            "shimizu"
+          ]
+        },
+        "2026-07-14": {
+          "morning": [
+            "aoki",
+            "kaminaga"
+          ],
+          "midday": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "evening": [
+            "tazawa",
+            "suyama"
+          ]
+        },
+        "2026-07-15": {
+          "morning": [
+            "madokawa",
+            "tazawa"
+          ],
+          "midday": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "evening": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-07-16": {
+          "morning": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "midday": [
+            "tazawa",
+            "suyama"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-07-17": {
+          "morning": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "midday": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "suyama",
+            "aoki"
+          ]
+        },
+        "2026-07-18": {
+          "morning": [
+            "uruchida",
+            "suyama"
+          ],
+          "midday": [
+            "suyama",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "madokawa"
+          ]
+        },
+        "2026-07-19": {
+          "morning": [
+            "shimizu"
+          ],
+          "midday": [
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "aoki"
+          ]
+        },
+        "2026-07-20": {
+          "morning": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "evening": [
+            "aoki",
+            "kaminaga"
+          ]
+        },
+        "2026-07-21": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        },
+        "2026-07-22": {
+          "morning": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "midday": [
+            "aoki",
+            "kaminaga"
+          ],
+          "evening": [
+            "sato_takashi",
+            "uruchida"
+          ]
+        },
+        "2026-07-23": {
+          "morning": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "midday": [
+            "madokawa",
+            "tazawa"
+          ],
+          "evening": [
+            "kaminaga",
+            "shimizu"
+          ]
+        },
+        "2026-07-24": {
+          "morning": [
+            "aoki",
+            "kaminaga"
+          ],
+          "midday": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "evening": [
+            "tazawa",
+            "suyama"
+          ]
+        },
+        "2026-07-25": {
+          "morning": [
+            "sato_takashi",
+            "tazawa"
+          ],
+          "midday": [
+            "tazawa",
+            "shimizu"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-07-26": {
+          "morning": [
+            "kaminaga"
+          ],
+          "midday": [
+            "uruchida"
+          ],
+          "evening": [
+            "suyama"
+          ]
+        },
+        "2026-07-27": {
+          "morning": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "midday": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "suyama",
+            "aoki"
+          ]
+        },
+        "2026-07-28": {
+          "morning": [
+            "tazawa",
+            "suyama"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ]
+        },
+        "2026-07-29": {
+          "morning": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "suyama",
+            "aoki"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ]
+        },
+        "2026-07-30": {
+          "morning": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "evening": [
+            "aoki",
+            "kaminaga"
+          ]
+        },
+        "2026-07-31": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        }
+      },
+      "2026-08": {
+        "2026-08-01": {
+          "morning": [
+            "sakamoto_tadashi",
+            "aoki"
+          ],
+          "midday": [
+            "aoki",
+            "sato_takashi"
+          ],
+          "evening": [
+            "sato_takashi",
+            "tazawa"
+          ]
+        },
+        "2026-08-02": {
+          "morning": [
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "madokawa"
+          ],
+          "evening": [
+            "kaminaga"
+          ]
+        },
+        "2026-08-03": {
+          "morning": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "midday": [
+            "madokawa",
+            "tazawa"
+          ],
+          "evening": [
+            "kaminaga",
+            "shimizu"
+          ]
+        },
+        "2026-08-04": {
+          "morning": [
+            "aoki",
+            "kaminaga"
+          ],
+          "midday": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "evening": [
+            "tazawa",
+            "suyama"
+          ]
+        },
+        "2026-08-05": {
+          "morning": [
+            "madokawa",
+            "tazawa"
+          ],
+          "midday": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "evening": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-08-06": {
+          "morning": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "midday": [
+            "tazawa",
+            "suyama"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-08-07": {
+          "morning": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "midday": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "suyama",
+            "aoki"
+          ]
+        },
+        "2026-08-08": {
+          "morning": [
+            "uruchida",
+            "suyama"
+          ],
+          "midday": [
+            "suyama",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "madokawa"
+          ]
+        },
+        "2026-08-09": {
+          "morning": [
+            "shimizu"
+          ],
+          "midday": [
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "aoki"
+          ]
+        },
+        "2026-08-10": {
+          "morning": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "evening": [
+            "aoki",
+            "kaminaga"
+          ]
+        },
+        "2026-08-11": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        },
+        "2026-08-12": {
+          "morning": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "midday": [
+            "aoki",
+            "kaminaga"
+          ],
+          "evening": [
+            "sato_takashi",
+            "uruchida"
+          ]
+        },
+        "2026-08-13": {
+          "morning": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "midday": [
+            "madokawa",
+            "tazawa"
+          ],
+          "evening": [
+            "kaminaga",
+            "shimizu"
+          ]
+        },
+        "2026-08-14": {
+          "morning": [
+            "aoki",
+            "kaminaga"
+          ],
+          "midday": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "evening": [
+            "tazawa",
+            "suyama"
+          ]
+        },
+        "2026-08-15": {
+          "morning": [
+            "sato_takashi",
+            "tazawa"
+          ],
+          "midday": [
+            "tazawa",
+            "shimizu"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-08-16": {
+          "morning": [
+            "kaminaga"
+          ],
+          "midday": [
+            "uruchida"
+          ],
+          "evening": [
+            "suyama"
+          ]
+        },
+        "2026-08-17": {
+          "morning": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "midday": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "suyama",
+            "aoki"
+          ]
+        },
+        "2026-08-18": {
+          "morning": [
+            "tazawa",
+            "suyama"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ]
+        },
+        "2026-08-19": {
+          "morning": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "suyama",
+            "aoki"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ]
+        },
+        "2026-08-20": {
+          "morning": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "evening": [
+            "aoki",
+            "kaminaga"
+          ]
+        },
+        "2026-08-21": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        },
+        "2026-08-22": {
+          "morning": [
+            "sakamoto_yumiko",
+            "madokawa"
+          ],
+          "midday": [
+            "madokawa",
+            "kaminaga"
+          ],
+          "evening": [
+            "kaminaga",
+            "uruchida"
+          ]
+        },
+        "2026-08-23": {
+          "morning": [
+            "aoki"
+          ],
+          "midday": [
+            "sato_takashi"
+          ],
+          "evening": [
+            "tazawa"
+          ]
+        },
+        "2026-08-24": {
+          "morning": [
+            "aoki",
+            "kaminaga"
+          ],
+          "midday": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "evening": [
+            "tazawa",
+            "suyama"
+          ]
+        },
+        "2026-08-25": {
+          "morning": [
+            "madokawa",
+            "tazawa"
+          ],
+          "midday": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "evening": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-08-26": {
+          "morning": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "midday": [
+            "tazawa",
+            "suyama"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-08-27": {
+          "morning": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "midday": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "suyama",
+            "aoki"
+          ]
+        },
+        "2026-08-28": {
+          "morning": [
+            "tazawa",
+            "suyama"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ]
+        },
+        "2026-08-29": {
+          "morning": [
+            "shimizu",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "aoki"
+          ],
+          "evening": [
+            "aoki",
+            "sato_takashi"
+          ]
+        },
+        "2026-08-30": {
+          "morning": [
+            "suyama"
+          ],
+          "midday": [
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "madokawa"
+          ]
+        },
+        "2026-08-31": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        }
+      }
+    },
+    "final": {
+      "2026-06": {
+        "2026-06-01": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        },
+        "2026-06-02": {
+          "morning": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "midday": [
+            "aoki",
+            "kaminaga"
+          ],
+          "evening": [
+            "sato_takashi",
+            "uruchida"
+          ]
+        },
+        "2026-06-03": {
+          "morning": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "midday": [
+            "madokawa",
+            "tazawa"
+          ],
+          "evening": [
+            "kaminaga",
+            "shimizu"
+          ]
+        },
+        "2026-06-04": {
+          "morning": [
+            "aoki",
+            "kaminaga"
+          ],
+          "midday": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "evening": [
+            "tazawa",
+            "suyama"
+          ]
+        },
+        "2026-06-05": {
+          "morning": [
+            "madokawa",
+            "tazawa"
+          ],
+          "midday": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "evening": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-06-06": {
+          "morning": [
+            "kaminaga",
+            "uruchida"
+          ],
+          "midday": [
+            "uruchida",
+            "suyama"
+          ],
+          "evening": [
+            "suyama",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-06-07": {
+          "morning": [
+            "tazawa"
+          ],
+          "midday": [
+            "shimizu"
+          ],
+          "evening": [
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-06-08": {
+          "morning": [
+            "tazawa",
+            "suyama"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ]
+        },
+        "2026-06-09": {
+          "morning": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "suyama",
+            "aoki"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ]
+        },
+        "2026-06-10": {
+          "morning": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "evening": [
+            "aoki",
+            "kaminaga"
+          ]
+        },
+        "2026-06-11": {
+          "morning": [
+            "suyama",
+            "aoki"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "evening": [
+            "madokawa",
+            "tazawa"
+          ]
+        },
+        "2026-06-12": {
+          "morning": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "midday": [
+            "aoki",
+            "kaminaga"
+          ],
+          "evening": [
+            "sato_takashi",
+            "uruchida"
+          ]
+        },
+        "2026-06-13": {
+          "morning": [
+            "aoki",
+            "sato_takashi"
+          ],
+          "midday": [
+            "sato_takashi",
+            "tazawa"
+          ],
+          "evening": [
+            "tazawa",
+            "shimizu"
+          ]
+        },
+        "2026-06-14": {
+          "morning": [
+            "madokawa"
+          ],
+          "midday": [
+            "kaminaga"
+          ],
+          "evening": [
+            "uruchida"
+          ]
+        },
+        "2026-06-15": {
+          "morning": [
+            "madokawa",
+            "tazawa"
+          ],
+          "midday": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "evening": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-06-16": {
+          "morning": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "midday": [
+            "tazawa",
+            "suyama"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-06-17": {
+          "morning": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "midday": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "suyama",
+            "aoki"
+          ]
+        },
+        "2026-06-18": {
+          "morning": [
+            "tazawa",
+            "suyama"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ]
+        },
+        "2026-06-19": {
+          "morning": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "suyama",
+            "aoki"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ]
+        },
+        "2026-06-20": {
+          "morning": [
+            "suyama",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_yumiko",
+            "madokawa"
+          ],
+          "evening": [
+            "madokawa",
+            "kaminaga"
+          ]
+        },
+        "2026-06-21": {
+          "morning": [
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "aoki"
+          ],
+          "evening": [
+            "sato_takashi"
+          ]
+        },
+        "2026-06-22": {
+          "morning": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "midday": [
+            "aoki",
+            "kaminaga"
+          ],
+          "evening": [
+            "sato_takashi",
+            "uruchida"
+          ]
+        },
+        "2026-06-23": {
+          "morning": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ],
+          "midday": [
+            "madokawa",
+            "tazawa"
+          ],
+          "evening": [
+            "kaminaga",
+            "shimizu"
+          ]
+        },
+        "2026-06-24": {
+          "morning": [
+            "aoki",
+            "kaminaga"
+          ],
+          "midday": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "evening": [
+            "tazawa",
+            "suyama"
+          ]
+        },
+        "2026-06-25": {
+          "morning": [
+            "madokawa",
+            "tazawa"
+          ],
+          "midday": [
+            "kaminaga",
+            "shimizu"
+          ],
+          "evening": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ]
+        },
+        "2026-06-26": {
+          "morning": [
+            "sato_takashi",
+            "uruchida"
+          ],
+          "midday": [
+            "tazawa",
+            "suyama"
+          ],
+          "evening": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-06-27": {
+          "morning": [
+            "tazawa",
+            "shimizu"
+          ],
+          "midday": [
+            "shimizu",
+            "sakamoto_tadashi"
+          ],
+          "evening": [
+            "sakamoto_tadashi",
+            "aoki"
+          ]
+        },
+        "2026-06-28": {
+          "morning": [
+            "uruchida"
+          ],
+          "midday": [
+            "suyama"
+          ],
+          "evening": [
+            "sakamoto_yumiko"
+          ]
+        },
+        "2026-06-29": {
+          "morning": [
+            "uruchida",
+            "sakamoto_tadashi"
+          ],
+          "midday": [
+            "suyama",
+            "aoki"
+          ],
+          "evening": [
+            "sakamoto_yumiko",
+            "sato_takashi"
+          ]
+        },
+        "2026-06-30": {
+          "morning": [
+            "shimizu",
+            "sakamoto_yumiko"
+          ],
+          "midday": [
+            "sakamoto_tadashi",
+            "madokawa"
+          ],
+          "evening": [
+            "aoki",
+            "kaminaga"
+          ]
+        }
+      }
+    }
+  },
+  "workflow": {
+    "2026-06": {
+      "draftSharedAt": null,
+      "finalizedAt": "2026-06-05T13:03:53.149Z",
+      "draftDeadline": "",
+      "finalDeadline": "",
+      "monthlyNote": ""
+    },
+    "2026-07": {
+      "draftSharedAt": null,
+      "finalizedAt": null,
+      "draftDeadline": "",
+      "finalDeadline": "",
+      "monthlyNote": ""
+    },
+    "2026-08": {
+      "draftSharedAt": null,
+      "finalizedAt": null,
+      "draftDeadline": "",
+      "finalDeadline": "",
+      "monthlyNote": ""
+    }
+  },
+  "board": [
+    {
+      "id": "9772881f-3748-443f-80fd-914634477fc0",
+      "type": "notice",
+      "date": "2026-06-01",
+      "slot": "morning",
+      "fromStaff": "shimizu",
+      "toStaff": "",
+      "message": "確定シフトを提出しました。以後の交代は掲示板の交換成立申請から承認します。",
+      "status": "open",
+      "createdBy": "shimizu",
+      "createdByName": "清水 暁",
+      "createdAt": "2026-06-05T13:03:53.150Z",
+      "appliedAt": null,
+      "consentBy": null,
+      "consentAt": null,
+      "declinedBy": null,
+      "declinedAt": null,
+      "approvedBy": null,
+      "approvedAt": null,
+      "rejectedBy": null,
+      "rejectedAt": null
+    },
+    {
+      "id": "seed-2026-06-swap",
+      "type": "swapConfirmed",
+      "date": "2026-06-04",
+      "slot": "evening",
+      "fromStaff": "aoki",
+      "toStaff": "madokawa",
+      "message": "青木 朋美さんの夕方番組を窓川 唯良さんが代わります。窓川さんの承諾後、管理者承認へ進みます。",
+      "status": "pendingConsent",
+      "createdBy": "aoki",
+      "createdByName": "青木 朋美",
+      "createdAt": "2026-06-04T12:24:55.314Z",
+      "appliedAt": null,
+      "consentBy": null,
+      "consentAt": null,
+      "declinedBy": null,
+      "declinedAt": null,
+      "approvedBy": null,
+      "approvedAt": null,
+      "rejectedBy": null,
+      "rejectedAt": null
+    },
+    {
+      "id": "seed-2026-06-absence",
+      "type": "absence",
+      "date": "2026-06-06",
+      "slot": "midday",
+      "fromStaff": "suyama",
+      "toStaff": "",
+      "message": "昼ニュースに入れなくなりました。交代できる方がいればお願いします。",
+      "status": "open",
+      "createdBy": "suyama",
+      "createdByName": "須山 成美",
+      "createdAt": "2026-06-04T12:44:55.314Z",
+      "appliedAt": null,
+      "consentBy": null,
+      "consentAt": null,
+      "declinedBy": null,
+      "declinedAt": null,
+      "approvedBy": null,
+      "approvedAt": null,
+      "rejectedBy": null,
+      "rejectedAt": null
+    },
+    {
+      "id": "seed-2026-06-notice",
+      "type": "notice",
+      "date": "2026-06-10",
+      "slot": "morning",
+      "fromStaff": "sakamoto_yumiko",
+      "toStaff": "",
+      "message": "川崎区役所からの地域情報を朝の枠で必ず読み上げます。担当者は台本確認をお願いします。",
+      "status": "open",
+      "createdBy": "sakamoto_yumiko",
+      "createdByName": "坂本 由美子",
+      "createdAt": "2026-06-04T13:05:55.314Z",
+      "appliedAt": null,
+      "consentBy": null,
+      "consentAt": null,
+      "declinedBy": null,
+      "declinedAt": null,
+      "approvedBy": null,
+      "approvedAt": null,
+      "rejectedBy": null,
+      "rejectedAt": null
+    }
+  ],
+  "availability": [
+    {
+      "id": "seed-2026-06-off-suyama",
+      "staffId": "suyama",
+      "date": "2026-06-06",
+      "slot": "midday",
+      "type": "off",
+      "note": "昼ニュースは難しいため交代希望",
+      "createdAt": "2026-06-04T12:45:55.314Z",
+      "updatedAt": "2026-06-04T12:45:55.314Z",
+      "updatedBy": "suyama"
+    },
+    {
+      "id": "seed-2026-06-available-shimizu",
+      "staffId": "shimizu",
+      "date": "2026-06-07",
+      "slot": "all",
+      "type": "available",
+      "note": "終日対応可能",
+      "createdAt": "2026-06-04T12:57:55.314Z",
+      "updatedAt": "2026-06-04T12:57:55.314Z",
+      "updatedBy": "shimizu"
+    }
+  ],
+  "staffProfiles": {
+    "shimizu": {
+      "staffId": "shimizu",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "suyama": {
+      "staffId": "suyama",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "sakamoto_tadashi": {
+      "staffId": "sakamoto_tadashi",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "sakamoto_yumiko": {
+      "staffId": "sakamoto_yumiko",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "aoki": {
+      "staffId": "aoki",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "madokawa": {
+      "staffId": "madokawa",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "sato_takashi": {
+      "staffId": "sato_takashi",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "kaminaga": {
+      "staffId": "kaminaga",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "tazawa": {
+      "staffId": "tazawa",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    },
+    "uruchida": {
+      "staffId": "uruchida",
+      "contact": "",
+      "skills": "パーソナリティ",
+      "unavailableNote": "",
+      "updatedAt": null,
+      "updatedBy": null
+    }
+  },
+  "contentItems": [
+    {
+      "id": "content-2026-06-event",
+      "date": "2026-06-05",
+      "program": "朝の情報枠",
+      "type": "script",
+      "title": "川崎区の週末イベント紹介",
+      "tags": [
+        "川崎区",
+        "イベント",
+        "地域情報"
+      ],
+      "source": "写真: event-board-0605.jpg",
+      "body": "週末に川崎区内で行われる地域イベントを紹介。開催時間、会場、交通情報を短く整理して伝える。",
+      "transcript": "今週末は川崎区内で親子向けのイベントが複数予定されています。お出かけ前に交通情報も確認してください。",
+      "createdAt": "2026-06-05T12:06:50.515Z",
+      "createdBy": "shimizu",
+      "createdByName": "清水 暁",
+      "updatedAt": "2026-06-05T12:06:50.518Z",
+      "updatedBy": "shimizu",
+      "updatedByName": "清水 暁"
+    },
+    {
+      "id": "content-2026-06-health",
+      "date": "2026-06-08",
+      "program": "昼ニュース",
+      "type": "memo",
+      "title": "梅雨時期の体調管理",
+      "tags": [
+        "健康",
+        "梅雨",
+        "生活情報"
+      ],
+      "source": "動画: health-rainy-season.mp4",
+      "body": "梅雨時期の睡眠、湿度、食中毒予防を扱う。医療断定は避け、行政や専門機関の情報確認を促す。",
+      "transcript": "",
+      "createdAt": "2026-06-05T12:26:50.518Z",
+      "createdBy": "suyama",
+      "createdByName": "須山 成美",
+      "updatedAt": "2026-06-05T12:26:50.518Z",
+      "updatedBy": "suyama",
+      "updatedByName": "須山 成美"
+    },
+    {
+      "id": "content-2026-06-duplicate-demo",
+      "date": "2026-06-12",
+      "program": "夕方番組",
+      "type": "transcript",
+      "title": "川崎区の週末イベント振り返り",
+      "tags": [
+        "川崎区",
+        "イベント"
+      ],
+      "source": "文字起こし",
+      "body": "",
+      "transcript": "川崎区内で週末に行われた地域イベントを振り返り、会場の様子や交通情報について紹介しました。",
+      "createdAt": "2026-06-05T12:51:50.518Z",
+      "createdBy": "aoki",
+      "createdByName": "青木 朋美",
+      "updatedAt": "2026-06-05T12:51:50.518Z",
+      "updatedBy": "aoki",
+      "updatedByName": "青木 朋美"
+    }
+  ],
+  "musicLibrary": [
+    {
+      "id": "track-a001-1",
+      "cdCode": "A-001",
+      "shelf": "A",
+      "trackNo": "1",
+      "title": "初夏の風通り",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "初夏",
+      "mood": "爽やか",
+      "themes": [
+        "初夏",
+        "朝",
+        "晴れ"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a001-2",
+      "cdCode": "A-001",
+      "shelf": "A",
+      "trackNo": "2",
+      "title": "雨上がりの参道",
+      "artist": "FM大師ライブラリ",
+      "genre": "インスト",
+      "season": "梅雨",
+      "mood": "落ち着く",
+      "themes": [
+        "雨",
+        "川崎大師",
+        "散歩"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a001-3",
+      "cdCode": "A-001",
+      "shelf": "A",
+      "trackNo": "3",
+      "title": "花束の約束",
+      "artist": "FM大師ライブラリ",
+      "genre": "バラード",
+      "season": "通年",
+      "mood": "温かい",
+      "themes": [
+        "結婚式",
+        "ジューンブライド"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a002-1",
+      "cdCode": "A-002",
+      "shelf": "A",
+      "trackNo": "1",
+      "title": "海辺のニュース",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "夏",
+      "mood": "明るい",
+      "themes": [
+        "夏",
+        "海",
+        "昼"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a002-2",
+      "cdCode": "A-002",
+      "shelf": "A",
+      "trackNo": "2",
+      "title": "祭り囃子の帰り道",
+      "artist": "FM大師ライブラリ",
+      "genre": "和風",
+      "season": "夏",
+      "mood": "にぎやか",
+      "themes": [
+        "祭り",
+        "夕方"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a002-3",
+      "cdCode": "A-002",
+      "shelf": "A",
+      "trackNo": "3",
+      "title": "八月の青空",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "夏",
+      "mood": "爽快",
+      "themes": [
+        "夏",
+        "青空"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a003-1",
+      "cdCode": "A-003",
+      "shelf": "A",
+      "trackNo": "1",
+      "title": "秋風の手紙",
+      "artist": "FM大師ライブラリ",
+      "genre": "バラード",
+      "season": "秋",
+      "mood": "穏やか",
+      "themes": [
+        "秋",
+        "始まり"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a003-2",
+      "cdCode": "A-003",
+      "shelf": "A",
+      "trackNo": "2",
+      "title": "読書灯",
+      "artist": "FM大師ライブラリ",
+      "genre": "ジャズ",
+      "season": "秋",
+      "mood": "落ち着く",
+      "themes": [
+        "秋",
+        "夜"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a003-3",
+      "cdCode": "A-003",
+      "shelf": "A",
+      "trackNo": "3",
+      "title": "金木犀の駅前",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "秋",
+      "mood": "懐かしい",
+      "themes": [
+        "秋",
+        "散歩"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a004-1",
+      "cdCode": "A-004",
+      "shelf": "A",
+      "trackNo": "1",
+      "title": "冬の商店街",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "冬",
+      "mood": "温かい",
+      "themes": [
+        "冬",
+        "年末"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a004-2",
+      "cdCode": "A-004",
+      "shelf": "A",
+      "trackNo": "2",
+      "title": "白い息の朝",
+      "artist": "FM大師ライブラリ",
+      "genre": "インスト",
+      "season": "冬",
+      "mood": "静か",
+      "themes": [
+        "冬",
+        "朝"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-a004-3",
+      "cdCode": "A-004",
+      "shelf": "A",
+      "trackNo": "3",
+      "title": "新しい年へ",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "冬",
+      "mood": "前向き",
+      "themes": [
+        "新年",
+        "希望"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-b001-1",
+      "cdCode": "B-001",
+      "shelf": "B",
+      "trackNo": "1",
+      "title": "春待ちラジオ",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "春",
+      "mood": "明るい",
+      "themes": [
+        "春",
+        "新生活"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-b001-2",
+      "cdCode": "B-001",
+      "shelf": "B",
+      "trackNo": "2",
+      "title": "桜色の交差点",
+      "artist": "FM大師ライブラリ",
+      "genre": "バラード",
+      "season": "春",
+      "mood": "やさしい",
+      "themes": [
+        "春",
+        "桜"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-b001-3",
+      "cdCode": "B-001",
+      "shelf": "B",
+      "trackNo": "3",
+      "title": "旅立ちのホーム",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "春",
+      "mood": "前向き",
+      "themes": [
+        "卒業",
+        "旅立ち"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-b002-1",
+      "cdCode": "B-002",
+      "shelf": "B",
+      "trackNo": "1",
+      "title": "昼下がりのジャズ",
+      "artist": "FM大師ライブラリ",
+      "genre": "ジャズ",
+      "season": "通年",
+      "mood": "落ち着く",
+      "themes": [
+        "昼",
+        "カフェ"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-b002-2",
+      "cdCode": "B-002",
+      "shelf": "B",
+      "trackNo": "2",
+      "title": "ニュース前の一曲",
+      "artist": "FM大師ライブラリ",
+      "genre": "インスト",
+      "season": "通年",
+      "mood": "端正",
+      "themes": [
+        "ニュース",
+        "短尺"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-b002-3",
+      "cdCode": "B-002",
+      "shelf": "B",
+      "trackNo": "3",
+      "title": "夕暮れブリッジ",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "通年",
+      "mood": "穏やか",
+      "themes": [
+        "夕方",
+        "川崎"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-c001-1",
+      "cdCode": "C-001",
+      "shelf": "C",
+      "trackNo": "1",
+      "title": "雨音ワルツ",
+      "artist": "FM大師ライブラリ",
+      "genre": "ジャズ",
+      "season": "梅雨",
+      "mood": "落ち着く",
+      "themes": [
+        "雨",
+        "夜"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-c001-2",
+      "cdCode": "C-001",
+      "shelf": "C",
+      "trackNo": "2",
+      "title": "指輪のメロディ",
+      "artist": "FM大師ライブラリ",
+      "genre": "バラード",
+      "season": "通年",
+      "mood": "華やか",
+      "themes": [
+        "結婚式",
+        "ジューンブライド"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-c001-3",
+      "cdCode": "C-001",
+      "shelf": "C",
+      "trackNo": "3",
+      "title": "チャペルの朝",
+      "artist": "FM大師ライブラリ",
+      "genre": "クラシック",
+      "season": "通年",
+      "mood": "清らか",
+      "themes": [
+        "結婚式",
+        "朝"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-c002-1",
+      "cdCode": "C-002",
+      "shelf": "C",
+      "trackNo": "1",
+      "title": "ひまわり通り",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "夏",
+      "mood": "元気",
+      "themes": [
+        "夏",
+        "家族"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-c002-2",
+      "cdCode": "C-002",
+      "shelf": "C",
+      "trackNo": "2",
+      "title": "夕立のあとで",
+      "artist": "FM大師ライブラリ",
+      "genre": "バラード",
+      "season": "夏",
+      "mood": "涼しい",
+      "themes": [
+        "夏",
+        "雨"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-c002-3",
+      "cdCode": "C-002",
+      "shelf": "C",
+      "trackNo": "3",
+      "title": "波音ステーション",
+      "artist": "FM大師ライブラリ",
+      "genre": "インスト",
+      "season": "夏",
+      "mood": "爽やか",
+      "themes": [
+        "海",
+        "夏"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-d001-1",
+      "cdCode": "D-001",
+      "shelf": "D",
+      "trackNo": "1",
+      "title": "小さな灯り",
+      "artist": "FM大師ライブラリ",
+      "genre": "バラード",
+      "season": "秋",
+      "mood": "温かい",
+      "themes": [
+        "秋",
+        "家族"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-d001-2",
+      "cdCode": "D-001",
+      "shelf": "D",
+      "trackNo": "2",
+      "title": "九月の始発",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "秋",
+      "mood": "前向き",
+      "themes": [
+        "秋",
+        "始まり"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-d001-3",
+      "cdCode": "D-001",
+      "shelf": "D",
+      "trackNo": "3",
+      "title": "夜長のリズム",
+      "artist": "FM大師ライブラリ",
+      "genre": "ジャズ",
+      "season": "秋",
+      "mood": "落ち着く",
+      "themes": [
+        "秋",
+        "夜"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-d002-1",
+      "cdCode": "D-002",
+      "shelf": "D",
+      "trackNo": "1",
+      "title": "商店街サンバ",
+      "artist": "FM大師ライブラリ",
+      "genre": "ラテン",
+      "season": "夏",
+      "mood": "にぎやか",
+      "themes": [
+        "祭り",
+        "商店街"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-d002-2",
+      "cdCode": "D-002",
+      "shelf": "D",
+      "trackNo": "2",
+      "title": "多摩川サンセット",
+      "artist": "FM大師ライブラリ",
+      "genre": "インスト",
+      "season": "通年",
+      "mood": "穏やか",
+      "themes": [
+        "夕方",
+        "川崎"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-d002-3",
+      "cdCode": "D-002",
+      "shelf": "D",
+      "trackNo": "3",
+      "title": "地域ニュースのテーマ",
+      "artist": "FM大師ライブラリ",
+      "genre": "インスト",
+      "season": "通年",
+      "mood": "端正",
+      "themes": [
+        "ニュース",
+        "短尺"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-e001-1",
+      "cdCode": "E-001",
+      "shelf": "E",
+      "trackNo": "1",
+      "title": "家族写真",
+      "artist": "FM大師ライブラリ",
+      "genre": "バラード",
+      "season": "通年",
+      "mood": "温かい",
+      "themes": [
+        "家族",
+        "結婚式"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-e001-2",
+      "cdCode": "E-001",
+      "shelf": "E",
+      "trackNo": "2",
+      "title": "六月の招待状",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "初夏",
+      "mood": "華やか",
+      "themes": [
+        "ジューンブライド",
+        "結婚式"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-e001-3",
+      "cdCode": "E-001",
+      "shelf": "E",
+      "trackNo": "3",
+      "title": "雨傘のデュエット",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "梅雨",
+      "mood": "やさしい",
+      "themes": [
+        "雨",
+        "初夏"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-e002-1",
+      "cdCode": "E-002",
+      "shelf": "E",
+      "trackNo": "1",
+      "title": "朝市の足音",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "通年",
+      "mood": "明るい",
+      "themes": [
+        "朝",
+        "地域"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-e002-2",
+      "cdCode": "E-002",
+      "shelf": "E",
+      "trackNo": "2",
+      "title": "町角インタビュー",
+      "artist": "FM大師ライブラリ",
+      "genre": "インスト",
+      "season": "通年",
+      "mood": "軽快",
+      "themes": [
+        "トーク",
+        "短尺"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    },
+    {
+      "id": "track-e002-3",
+      "cdCode": "E-002",
+      "shelf": "E",
+      "trackNo": "3",
+      "title": "お便り日和",
+      "artist": "FM大師ライブラリ",
+      "genre": "ポップス",
+      "season": "通年",
+      "mood": "やさしい",
+      "themes": [
+        "リスナー",
+        "昼"
+      ],
+      "notes": "デモ用の仮登録です。実CD台帳に差し替えてください。",
+      "createdAt": "2026-06-05T11:36:50.518Z",
+      "createdBy": "system",
+      "updatedAt": "2026-06-05T11:36:50.518Z",
+      "updatedBy": "system"
+    }
+  ],
+  "musicSchedule": {
+    "2026-06": {
+      "2026-06-16": {
+        "date": "2026-06-16",
+        "theme": "ジューンブライド",
+        "count": 30,
+        "trackIds": [
+          "track-e001-2",
+          "track-e001-3",
+          "track-c001-2",
+          "track-a001-3",
+          "track-c002-2",
+          "track-c001-3",
+          "track-e001-1",
+          "track-c001-1",
+          "track-a001-2",
+          "track-a001-1",
+          "track-e002-3",
+          "track-d002-3",
+          "track-e002-2",
+          "track-a003-3",
+          "track-d002-2",
+          "track-e002-1",
+          "track-a003-2",
+          "track-b002-3",
+          "track-a003-1",
+          "track-b002-2",
+          "track-c002-3",
+          "track-b002-1",
+          "track-d002-1",
+          "track-a002-3",
+          "track-c002-1",
+          "track-a002-2",
+          "track-d001-3",
+          "track-a002-1",
+          "track-d001-2",
+          "track-a004-3"
+        ],
+        "generatedAt": "2026-06-05T13:37:51.884Z",
+        "generatedBy": "shimizu"
+      }
+    },
+    "2026-07": {},
+    "2026-08": {}
+  },
+  "businessDocuments": [
+    {
+      "id": "doc-2026-06-estimate",
+      "type": "estimate",
+      "issueDate": "2026-06-03",
+      "dueDate": "2026-06-17",
+      "client": "川崎区イベント実行委員会",
+      "contact": "ご担当者様",
+      "title": "地域イベント告知枠 制作・放送",
+      "amount": 88000,
+      "status": "sent",
+      "fileRef": "見積書_地域イベント告知枠_20260603.pdf",
+      "memo": "送付文コピーでメール下書きを作成。正式送信はメールソフトから行う想定。",
+      "sentAt": "2026-06-08T10:49:15.932Z",
+      "paidAt": null,
+      "createdAt": "2026-06-08T10:39:15.932Z",
+      "createdBy": "shimizu",
+      "createdByName": "清水 暁",
+      "updatedAt": "2026-06-08T10:49:15.932Z",
+      "updatedBy": "shimizu",
+      "updatedByName": "清水 暁"
+    },
+    {
+      "id": "doc-2026-06-delivery",
+      "type": "delivery",
+      "issueDate": "2026-06-06",
+      "dueDate": "",
+      "client": "大師商店街連合会",
+      "contact": "広報担当者様",
+      "title": "商店街キャンペーン収録データ納品",
+      "amount": 0,
+      "status": "ready",
+      "fileRef": "納品書_商店街キャンペーン_20260606.pdf",
+      "memo": "音声データと一緒に送付予定。",
+      "sentAt": null,
+      "paidAt": null,
+      "createdAt": "2026-06-08T11:19:15.932Z",
+      "createdBy": "suyama",
+      "createdByName": "須山 成美",
+      "updatedAt": "2026-06-08T11:19:15.932Z",
+      "updatedBy": "suyama",
+      "updatedByName": "須山 成美"
+    },
+    {
+      "id": "doc-2026-06-invoice",
+      "type": "invoice",
+      "issueDate": "2026-06-10",
+      "dueDate": "2026-06-30",
+      "client": "川崎大師周辺店舗",
+      "contact": "代表者様",
+      "title": "6月広告放送枠",
+      "amount": 132000,
+      "status": "draft",
+      "fileRef": "請求書_6月広告放送枠_20260610.pdf",
+      "memo": "内容確認後に送付。",
+      "sentAt": null,
+      "paidAt": null,
+      "createdAt": "2026-06-08T11:49:15.932Z",
+      "createdBy": "shimizu",
+      "createdByName": "清水 暁",
+      "updatedAt": "2026-06-08T11:49:15.932Z",
+      "updatedBy": "shimizu",
+      "updatedByName": "清水 暁"
+    }
+  ],
+  "shiftSlots": [
+    {
+      "id": "morning",
+      "label": "朝の情報枠",
+      "short": "朝",
+      "time": "08:00-10:00",
+      "className": "morning"
+    },
+    {
+      "id": "midday",
+      "label": "昼ニュース",
+      "short": "昼",
+      "time": "12:00-13:30",
+      "className": "midday"
+    },
+    {
+      "id": "evening",
+      "label": "夕方番組",
+      "short": "夕",
+      "time": "17:00-19:00",
+      "className": "evening"
+    }
+  ],
+  "auditLog": [
+    {
+      "id": "97308fd5-1796-4027-b0bb-05cb510eac46",
+      "actorId": "shimizu",
+      "actorName": "清水 暁",
+      "action": "選曲自動作成",
+      "detail": "6/16（火）の選曲を30曲作成しました。",
+      "createdAt": "2026-06-05T13:37:51.885Z"
+    },
+    {
+      "id": "ec6034fc-1c7b-4fd7-90c9-4d06f5e57a04",
+      "actorId": "shimizu",
+      "actorName": "清水 暁",
+      "action": "確定シフト作成",
+      "detail": "2026年6月の確定シフトを作成しました。",
+      "createdAt": "2026-06-05T13:03:53.151Z"
+    },
+    {
+      "id": "d1990b86-c535-4336-9f62-4b75e367a86c",
+      "actorId": "shimizu",
+      "actorName": "清水 暁",
+      "action": "デモデータリセット",
+      "detail": "保存データを初期状態に戻しました。",
+      "createdAt": "2026-06-04T13:19:55.314Z"
+    },
+    {
+      "id": "36f9bcac-7336-4b8d-ba88-de9c68324465",
+      "actorId": "system",
+      "actorName": "システム",
+      "action": "初期化",
+      "detail": "初期デモデータを作成しました。",
+      "createdAt": "2026-06-04T13:19:55.314Z"
+    }
+  ],
+  "updatedAt": "2026-06-20T10:49:19.474Z",
+  "version": 19
+}

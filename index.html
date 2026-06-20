@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>FM大師 業務管理</title>
+    <meta name="description" content="FM大師スタッフ向けのシフト、放送資料、音楽選曲をまとめて管理するウェブアプリです。" />
+    <meta name="theme-color" content="#087f8c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="FM大師業務" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="login-screen" id="loginScreen">
+      <form class="login-card" id="loginForm">
+        <div class="brand compact">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" role="img">
+              <circle cx="24" cy="24" r="8"></circle>
+              <path d="M12 19a15 15 0 0 0 0 10"></path>
+              <path d="M36 19a15 15 0 0 1 0 10"></path>
+              <path d="M6 14a25 25 0 0 0 0 20"></path>
+              <path d="M42 14a25 25 0 0 1 0 20"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">FM大師</p>
+            <h1>業務管理へログイン</h1>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label for="loginUser">ユーザー</label>
+          <select id="loginUser" name="loginUser"></select>
+        </div>
+        <div class="field-group">
+          <label for="loginPin">PIN</label>
+          <input id="loginPin" name="loginPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="4桁のPIN" required />
+        </div>
+        <button class="primary-button full-width" type="submit">ログイン</button>
+        <p class="login-hint">お客様確認用: PIN 2222。管理者確認は清水さん 0000、須山さん 0001 です。</p>
+      </form>
+    </div>
+
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48" role="img">
+              <circle cx="24" cy="24" r="8"></circle>
+              <path d="M12 19a15 15 0 0 0 0 10"></path>
+              <path d="M36 19a15 15 0 0 1 0 10"></path>
+              <path d="M6 14a25 25 0 0 0 0 20"></path>
+              <path d="M42 14a25 25 0 0 1 0 20"></path>
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">川崎区コミュニティラジオ</p>
+            <h1>FM大師 業務管理</h1>
+          </div>
+        </div>
+
+        <div class="top-actions" aria-label="業務操作">
+          <button class="ghost-button icon-button" id="prevMonth" type="button" aria-label="前の月">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+          </button>
+          <button class="ghost-button" id="todayButton" type="button">今日</button>
+          <button class="ghost-button icon-button" id="nextMonth" type="button" aria-label="次の月">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
+          <button class="primary-button admin-control" id="shareDraftButton" type="button">仮シフトを共有</button>
+          <button class="danger-button admin-control" id="finalizeButton" type="button">確定シフトにする</button>
+          <button class="ghost-button" id="installButton" type="button" hidden>ホームに追加</button>
+          <button class="ghost-button" id="notifyButton" type="button">通知を有効化</button>
+          <button class="ghost-button" id="logoutButton" type="button">ログアウト</button>
+          <span class="user-badge" id="userBadge">未ログイン</span>
+        </div>
+      </header>
+
+      <nav class="module-nav" aria-label="業務メニュー">
+        <button class="module-tab active" type="button" data-module="shift">シフト管理</button>
+        <button class="module-tab" type="button" data-module="music">音楽・選曲</button>
+        <button class="module-tab" type="button" data-module="content">放送資料</button>
+        <button class="module-tab admin-only" type="button" data-module="documents">書類送付</button>
+      </nav>
+
+      <main class="workspace module-panel active" id="shiftModule" data-module-panel="shift">
+        <section class="main-column" aria-label="月間シフトと掲示板">
+          <div class="calendar-toolbar">
+            <div>
+              <p class="section-label">月間シフト</p>
+              <h2 id="monthTitle">----</h2>
+            </div>
+
+            <div class="segmented-control admin-control" aria-label="表示するシフト">
+              <button class="segment active" id="draftViewButton" type="button">仮シフト</button>
+              <button class="segment" id="finalViewButton" type="button">確定シフト</button>
+            </div>
+          </div>
+
+          <div class="status-strip" id="statusStrip" aria-live="polite"></div>
+
+          <section class="today-summary-section" aria-labelledby="todaySummaryTitle">
+            <div class="section-heading compact-heading">
+              <div>
+                <p class="section-label">すぐ確認</p>
+                <h2 id="todaySummaryTitle">今日・明日の担当</h2>
+              </div>
+              <button class="ghost-button compact-action" id="copyTodayTomorrowButton" type="button">共有文をコピー</button>
+            </div>
+            <div class="top-assignment-list" id="topAssignmentList"></div>
+          </section>
+
+          <div class="calendar-shell" aria-label="1ヶ月のシフト表">
+            <div class="weekday-row" aria-hidden="true">
+              <span>月</span>
+              <span>火</span>
+              <span>水</span>
+              <span>木</span>
+              <span>金</span>
+              <span>土</span>
+              <span>日</span>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+          </div>
+
+          <section class="board-section" aria-labelledby="boardTitle">
+            <div class="section-heading">
+              <div>
+                <p class="section-label">リアルタイム掲示板</p>
+                <h2 id="boardTitle">シフト連絡</h2>
+              </div>
+              <p class="sync-status" id="syncStatus">同期待機中</p>
+            </div>
+            <div class="board-filter-row">
+              <button class="filter-button active" type="button" data-board-filter="all">すべて</button>
+              <button class="filter-button" type="button" data-board-filter="open">未対応</button>
+              <button class="filter-button" type="button" data-board-filter="mine">自分関連</button>
+            </div>
+
+            <form class="board-form" id="boardForm">
+              <div class="field-group">
+                <label for="postType">種別</label>
+                <select id="postType" name="postType">
+                  <option value="absence">この日のシフトに行けない</option>
+                  <option value="swapRequest">交換をお願いしたい</option>
+                  <option value="swapConfirmed">交換成立（承認申請）</option>
+                  <option value="notice">連絡事項</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="postDate">日付</label>
+                <input id="postDate" name="postDate" type="date" required />
+              </div>
+              <div class="field-group">
+                <label for="postSlot">担当枠</label>
+                <select id="postSlot" name="postSlot"></select>
+              </div>
+              <div class="field-group admin-field">
+                <label for="fromStaff">対象スタッフ</label>
+                <select id="fromStaff" name="fromStaff"></select>
+              </div>
+              <div class="field-group">
+                <label for="toStaff">交代スタッフ</label>
+                <select id="toStaff" name="toStaff"></select>
+              </div>
+              <div class="field-group wide">
+                <label for="postMessage">内容</label>
+                <textarea id="postMessage" name="postMessage" rows="2" placeholder="例: 体調不良のため、夕方番組の交代をお願いします。"></textarea>
+              </div>
+              <button class="primary-button board-submit" type="submit">投稿する</button>
+            </form>
+
+            <div class="board-list" id="boardList" aria-live="polite"></div>
+          </section>
+
+          <section class="list-section collapsible is-collapsed" aria-labelledby="shiftListTitle" data-collapsible>
+            <div class="section-heading">
+              <div>
+                <p class="section-label">スマホ向け一覧</p>
+                <h2 id="shiftListTitle">日別シフト</h2>
+              </div>
+              <button class="collapse-toggle" type="button" data-collapse-target="shiftListBody" aria-expanded="false">開く</button>
+            </div>
+            <div class="collapse-body" id="shiftListBody" hidden>
+              <div class="shift-list" id="shiftList"></div>
+            </div>
+          </section>
+        </section>
+
+        <aside class="side-column" aria-label="シフト編集と最新状況">
+          <section class="tool-panel collapsible is-collapsed" id="personalShiftPanel" data-collapsible tabindex="-1">
+            <div class="panel-heading">
+              <div>
+                <p class="section-label">個人別</p>
+                <h2 id="personalShiftTitle">自分のシフト</h2>
+              </div>
+              <button class="collapse-toggle" type="button" data-collapse-target="myShiftBody" aria-expanded="false">開く</button>
+            </div>
+            <div class="collapse-body" id="myShiftBody" hidden>
+              <div class="my-shift-list" id="myShiftList"></div>
+              <button class="ghost-button full-width print-button" id="copyMyShiftButton" type="button">この一覧をコピー</button>
+              <button class="ghost-button full-width print-button" id="printButton" type="button">印刷 / PDF保存</button>
+            </div>
+          </section>
+
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">希望提出</p>
+              <h2>休み・出勤可</h2>
+            </div>
+            <form id="availabilityForm" class="shift-form">
+              <div class="field-group admin-field">
+                <label for="availabilityStaff">スタッフ</label>
+                <select id="availabilityStaff" name="availabilityStaff"></select>
+              </div>
+              <div class="field-group">
+                <label for="availabilityDate">日付</label>
+                <input id="availabilityDate" name="availabilityDate" type="date" required />
+              </div>
+              <div class="field-group">
+                <label for="availabilitySlot">担当枠</label>
+                <select id="availabilitySlot" name="availabilitySlot">
+                  <option value="all">終日</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="availabilityType">種別</label>
+                <select id="availabilityType" name="availabilityType">
+                  <option value="off">希望休</option>
+                  <option value="available">出勤可能</option>
+                  <option value="note">勤務メモ</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="availabilityNote">メモ</label>
+                <textarea id="availabilityNote" name="availabilityNote" rows="2" placeholder="例: 午前のみ可能、終日不可など"></textarea>
+              </div>
+              <button class="primary-button full-width" type="submit">希望を登録</button>
+            </form>
+            <div class="availability-list" id="availabilityList"></div>
+          </section>
+
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">本日の最新状況</p>
+              <h2 id="todayHeading">--</h2>
+            </div>
+            <div class="today-list" id="todayList"></div>
+            <p class="last-updated" id="lastUpdated">更新履歴なし</p>
+          </section>
+
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">自動チェック</p>
+              <h2>シフト警告</h2>
+            </div>
+            <div class="issue-list" id="issueList"></div>
+          </section>
+
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">月間集計</p>
+              <h2>担当回数</h2>
+            </div>
+            <div class="staff-count-list" id="staffCountList"></div>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">承認フロー</p>
+              <h2>承認待ち</h2>
+            </div>
+            <div class="approval-list" id="approvalList"></div>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">シフト編集</p>
+              <h2>担当を登録</h2>
+            </div>
+            <form id="shiftForm" class="shift-form">
+              <div class="field-group">
+                <label for="shiftDate">日付</label>
+                <input id="shiftDate" name="shiftDate" type="date" required />
+              </div>
+              <div class="field-group">
+                <label for="shiftSlot">担当枠</label>
+                <select id="shiftSlot" name="shiftSlot"></select>
+              </div>
+              <div class="field-group">
+                <label for="primaryStaff">主担当</label>
+                <select id="primaryStaff" name="primaryStaff"></select>
+              </div>
+              <div class="field-group">
+                <label for="supportStaff">補助担当</label>
+                <select id="supportStaff" name="supportStaff"></select>
+              </div>
+              <button class="primary-button full-width" type="submit">シフトに反映</button>
+            </form>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">AI/CSV連携</p>
+              <h2>シフト取込</h2>
+            </div>
+            <div class="flow-list">
+              <button class="ghost-button full-width" id="aiPromptButton" type="button">AI用プロンプトをコピー</button>
+              <button class="ghost-button full-width" id="templateButton" type="button">CSVテンプレート出力</button>
+              <div class="field-group">
+                <label for="importView">反映先</label>
+                <select id="importView" name="importView">
+                  <option value="draft">仮シフト</option>
+                  <option value="final">確定シフト</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="importMode">取り込み方法</label>
+                <select id="importMode" name="importMode">
+                  <option value="merge">CSVの行だけ上書き</option>
+                  <option value="replaceMonth">対象月をCSVで作り直す</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="csvImportFile">CSVファイル</label>
+                <input id="csvImportFile" name="csvImportFile" type="file" accept=".csv,text/csv" />
+              </div>
+              <div class="field-group">
+                <label for="csvPasteText">CSV貼り付け</label>
+                <textarea id="csvPasteText" name="csvPasteText" rows="5" placeholder="日付,担当枠,主担当,補助担当&#10;2026-06-03,朝の情報枠,清水 暁,須山 成美"></textarea>
+              </div>
+              <button class="ghost-button full-width" id="previewCsvButton" type="button">CSV内容を確認</button>
+              <div class="csv-preview-list" id="csvPreviewList"></div>
+              <button class="primary-button full-width" id="importCsvButton" type="button" disabled>プレビューを反映</button>
+            </div>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">マスタ管理</p>
+              <h2>番組枠</h2>
+            </div>
+            <form id="slotMasterForm" class="master-form"></form>
+            <button class="primary-button full-width" id="saveSlotsButton" type="button">番組枠を保存</button>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">スタッフ管理</p>
+              <h2>連絡先・スキル</h2>
+            </div>
+            <form id="staffProfileForm" class="shift-form">
+              <div class="field-group">
+                <label for="profileStaff">スタッフ</label>
+                <select id="profileStaff" name="profileStaff"></select>
+              </div>
+              <div class="field-group">
+                <label for="profileContact">連絡先</label>
+                <input id="profileContact" name="profileContact" type="text" placeholder="電話、メール、LINE名など" />
+              </div>
+              <div class="field-group">
+                <label for="profileSkills">スキル・担当可能枠</label>
+                <textarea id="profileSkills" name="profileSkills" rows="2" placeholder="例: 朝番組、ニュース読み、収録対応"></textarea>
+              </div>
+              <div class="field-group">
+                <label for="profileUnavailable">NG曜日・注意事項</label>
+                <textarea id="profileUnavailable" name="profileUnavailable" rows="2" placeholder="例: 火曜午前不可、土曜は隔週のみ"></textarea>
+              </div>
+              <button class="primary-button full-width" type="submit">スタッフ情報を保存</button>
+            </form>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">作成支援</p>
+              <h2>月次フロー</h2>
+            </div>
+            <div class="flow-list">
+              <button class="ghost-button full-width" id="autoDraftButton" type="button">今月の仮シフトを自動作成</button>
+              <button class="ghost-button full-width" id="exportButton" type="button">シフトをCSV出力</button>
+              <button class="ghost-button full-width" id="backupButton" type="button">バックアップJSON出力</button>
+              <button class="ghost-button full-width" id="resetButton" type="button">デモデータに戻す</button>
+            </div>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">月次管理</p>
+              <h2>締切メモ</h2>
+            </div>
+            <form id="workflowSettingsForm" class="shift-form">
+              <div class="field-group">
+                <label for="draftDeadline">仮シフト共有予定日</label>
+                <input id="draftDeadline" name="draftDeadline" type="date" />
+              </div>
+              <div class="field-group">
+                <label for="finalDeadline">確定締切日</label>
+                <input id="finalDeadline" name="finalDeadline" type="date" />
+              </div>
+              <div class="field-group">
+                <label for="monthlyNote">月次メモ</label>
+                <textarea id="monthlyNote" name="monthlyNote" rows="2" placeholder="例: 月末までに希望休を回収、確定後は掲示板で交代申請"></textarea>
+              </div>
+              <button class="primary-button full-width" id="saveWorkflowSettingsButton" type="submit">締切メモを保存</button>
+            </form>
+          </section>
+
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">通知</p>
+              <h2>変更履歴</h2>
+            </div>
+            <div class="audit-list" id="auditList"></div>
+          </section>
+        </aside>
+      </main>
+
+      <main class="workspace content-workspace module-panel" id="musicModule" data-module-panel="music" hidden>
+        <section class="main-column" aria-label="選曲カレンダー">
+          <div class="calendar-toolbar">
+            <div>
+              <p class="section-label">音楽・選曲</p>
+              <h2 id="musicMonthTitle">----</h2>
+            </div>
+            <div class="segmented-control compact-segments" aria-label="音楽表示">
+              <button class="segment active" id="musicCalendarViewButton" type="button">カレンダー</button>
+              <button class="segment" id="musicLibraryViewButton" type="button">CD台帳</button>
+            </div>
+          </div>
+
+          <div class="operations-strip" id="musicKpiStrip" aria-live="polite"></div>
+
+          <section class="calendar-shell music-calendar-shell" aria-label="選曲カレンダー">
+            <div class="weekday-row" aria-hidden="true">
+              <span>月</span>
+              <span>火</span>
+              <span>水</span>
+              <span>木</span>
+              <span>金</span>
+              <span>土</span>
+              <span>日</span>
+            </div>
+            <div class="calendar-grid music-calendar-grid" id="musicCalendarGrid"></div>
+          </section>
+
+          <section class="board-section" aria-labelledby="musicPlaylistTitle">
+            <div class="section-heading">
+              <div>
+                <p class="section-label">本日の選曲</p>
+                <h2 id="musicPlaylistTitle">選曲リスト</h2>
+              </div>
+              <button class="ghost-button compact-action" id="exportMusicScheduleButton" type="button">CSV出力</button>
+            </div>
+            <div class="playlist-list" id="musicPlaylistList"></div>
+          </section>
+
+          <section class="list-section collapsible" aria-labelledby="musicLibraryTitle" data-collapsible>
+            <div class="section-heading">
+              <div>
+                <p class="section-label">CD台帳</p>
+                <h2 id="musicLibraryTitle">登録楽曲</h2>
+              </div>
+              <div class="inline-controls">
+                <input id="musicSearch" type="search" placeholder="曲名・アーティスト・テーマで検索" />
+                <button class="collapse-toggle" type="button" data-collapse-target="musicLibraryBody" aria-expanded="true">閉じる</button>
+              </div>
+            </div>
+            <div class="collapse-body" id="musicLibraryBody">
+              <div class="library-list" id="musicLibraryList"></div>
+            </div>
+          </section>
+        </section>
+
+        <aside class="side-column" aria-label="音楽管理">
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">AI選曲</p>
+              <h2>テーマから作成</h2>
+            </div>
+            <form id="musicGenerateForm" class="shift-form">
+              <div class="field-group">
+                <label for="musicGenerateDate">日付</label>
+                <input id="musicGenerateDate" name="musicGenerateDate" type="date" required />
+              </div>
+              <div class="field-group">
+                <label for="musicTheme">テーマ</label>
+                <input id="musicTheme" name="musicTheme" type="text" placeholder="例: ジューンブライド、夏、秋の始まり" />
+              </div>
+              <div class="field-group">
+                <label for="musicCount">曲数</label>
+                <input id="musicCount" name="musicCount" type="number" min="1" max="50" value="30" />
+              </div>
+              <button class="primary-button full-width" type="submit">選曲を自動作成</button>
+            </form>
+            <div class="flow-list">
+              <button class="ghost-button full-width" id="copyMusicAiPromptButton" type="button">AI整理プロンプトをコピー</button>
+              <button class="ghost-button full-width" id="exportMusicTemplateButton" type="button">CD台帳CSVテンプレート</button>
+            </div>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">CD登録</p>
+              <h2>楽曲を追加</h2>
+            </div>
+            <form id="musicTrackForm" class="shift-form">
+              <div class="field-group">
+                <label for="trackCdCode">CD番号・棚番号</label>
+                <input id="trackCdCode" name="trackCdCode" type="text" placeholder="例: A-001 / 棚3" />
+              </div>
+              <div class="field-group">
+                <label for="trackTitle">曲名</label>
+                <input id="trackTitle" name="trackTitle" type="text" required />
+              </div>
+              <div class="field-group">
+                <label for="trackArtist">アーティスト</label>
+                <input id="trackArtist" name="trackArtist" type="text" placeholder="不明でも可" />
+              </div>
+              <div class="field-group">
+                <label for="trackGenre">ジャンル</label>
+                <input id="trackGenre" name="trackGenre" type="text" placeholder="ポップス、演歌、ジャズなど" />
+              </div>
+              <div class="field-group">
+                <label for="trackSeason">季節</label>
+                <input id="trackSeason" name="trackSeason" type="text" placeholder="春、夏、秋、冬、通年" />
+              </div>
+              <div class="field-group">
+                <label for="trackMood">雰囲気・テーマ</label>
+                <textarea id="trackMood" name="trackMood" rows="2" placeholder="明るい、落ち着く、結婚式、雨、海など"></textarea>
+              </div>
+              <button class="primary-button full-width" type="submit">楽曲を保存</button>
+            </form>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">CSV取込</p>
+              <h2>CD台帳を反映</h2>
+            </div>
+            <div class="flow-list">
+              <div class="field-group">
+                <label for="musicCsvPasteText">CSV貼り付け</label>
+                <textarea id="musicCsvPasteText" name="musicCsvPasteText" rows="6" placeholder="CD番号,棚番号,曲番号,曲名,アーティスト,ジャンル,季節,雰囲気,テーマ,メモ"></textarea>
+              </div>
+              <button class="ghost-button full-width" id="previewMusicCsvButton" type="button">CSV内容を確認</button>
+              <div class="csv-preview-list" id="musicCsvPreviewList"></div>
+              <button class="primary-button full-width" id="importMusicCsvButton" type="button" disabled>CD台帳に反映</button>
+            </div>
+          </section>
+
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">自動チェック</p>
+              <h2>選曲警告</h2>
+            </div>
+            <div class="issue-list" id="musicIssueList"></div>
+          </section>
+        </aside>
+      </main>
+
+      <main class="workspace content-workspace module-panel" id="contentModule" data-module-panel="content" hidden>
+        <section class="main-column" aria-label="放送資料フォルダー">
+          <div class="calendar-toolbar">
+            <div>
+              <p class="section-label">放送資料</p>
+              <h2>台本・話した内容フォルダー</h2>
+            </div>
+            <input class="archive-search" id="contentSearch" type="search" placeholder="番組名・タイトル・タグ・本文で検索" />
+          </div>
+
+          <div class="operations-strip" id="contentKpiStrip" aria-live="polite"></div>
+
+          <section class="board-section" aria-labelledby="contentIssueTitle">
+            <div class="section-heading">
+              <div>
+                <p class="section-label">重複・ミス確認</p>
+                <h2 id="contentIssueTitle">自動チェック</h2>
+              </div>
+              <button class="ghost-button compact-action" id="copyContentAiPromptButton" type="button">AIチェック用にコピー</button>
+            </div>
+            <div class="issue-list" id="contentIssueList"></div>
+          </section>
+
+          <section class="list-section" aria-labelledby="contentArchiveTitle">
+            <div class="section-heading">
+              <div>
+                <p class="section-label">アーカイブ</p>
+                <h2 id="contentArchiveTitle">放送資料一覧</h2>
+              </div>
+              <button class="ghost-button compact-action" id="exportContentCsvButton" type="button">CSV出力</button>
+            </div>
+            <div class="content-list" id="contentList"></div>
+          </section>
+        </section>
+
+        <aside class="side-column" aria-label="放送資料登録">
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">資料登録</p>
+              <h2>台本・文字起こし</h2>
+            </div>
+            <form id="contentForm" class="shift-form">
+              <div class="field-group">
+                <label for="contentDate">放送日</label>
+                <input id="contentDate" name="contentDate" type="date" required />
+              </div>
+              <div class="field-group">
+                <label for="contentProgram">番組名</label>
+                <input id="contentProgram" name="contentProgram" type="text" placeholder="例: 朝の情報枠" />
+              </div>
+              <div class="field-group">
+                <label for="contentType">種類</label>
+                <select id="contentType" name="contentType">
+                  <option value="script">動画台本</option>
+                  <option value="transcript">話した内容</option>
+                  <option value="memo">放送メモ</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="contentTitle">タイトル</label>
+                <input id="contentTitle" name="contentTitle" type="text" required />
+              </div>
+              <div class="field-group">
+                <label for="contentTags">タグ</label>
+                <input id="contentTags" name="contentTags" type="text" placeholder="地域情報, 川崎区, イベント" />
+              </div>
+              <div class="field-group">
+                <label for="contentSource">写真・動画・資料メモ</label>
+                <input id="contentSource" name="contentSource" type="text" placeholder="ファイル名、URL、保管場所など" />
+              </div>
+              <div class="field-group">
+                <label for="contentBody">台本・要約</label>
+                <textarea id="contentBody" name="contentBody" rows="5" placeholder="放送前の台本や要点を入力"></textarea>
+              </div>
+              <div class="field-group">
+                <label for="contentTranscript">実際に話した内容</label>
+                <textarea id="contentTranscript" name="contentTranscript" rows="6" placeholder="文字起こしや放送後メモを入力"></textarea>
+              </div>
+              <button class="primary-button full-width" type="submit">放送資料を保存</button>
+            </form>
+          </section>
+
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">運用メモ</p>
+              <h2>AI連携の入口</h2>
+            </div>
+            <div class="flow-list">
+              <button class="ghost-button full-width" id="copyContentOrganizePromptButton" type="button">写真/動画整理プロンプト</button>
+              <p class="import-note">写真や動画から読み取った情報は、AIでCSV化してこの資料欄に登録する運用へ拡張できます。</p>
+            </div>
+          </section>
+        </aside>
+      </main>
+
+      <main class="workspace content-workspace module-panel admin-only" id="documentsModule" data-module-panel="documents" hidden>
+        <section class="main-column" aria-label="書類送付管理">
+          <div class="calendar-toolbar">
+            <div>
+              <p class="section-label">書類送付</p>
+              <h2>請求書・納品書・見積書</h2>
+            </div>
+            <div class="inline-controls">
+              <input class="archive-search" id="documentSearch" type="search" placeholder="送付先・件名・ファイル名で検索" />
+              <button class="ghost-button compact-action" id="exportDocumentsCsvButton" type="button">CSV出力</button>
+            </div>
+          </div>
+
+          <div class="operations-strip" id="documentKpiStrip" aria-live="polite"></div>
+
+          <section class="list-section" aria-labelledby="documentListTitle">
+            <div class="section-heading">
+              <div>
+                <p class="section-label">送付状況</p>
+                <h2 id="documentListTitle">書類一覧</h2>
+              </div>
+            </div>
+            <div class="document-list" id="documentList"></div>
+          </section>
+        </section>
+
+        <aside class="side-column" aria-label="書類登録">
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">新規登録</p>
+              <h2>送付書類を登録</h2>
+            </div>
+            <form id="documentForm" class="shift-form">
+              <div class="field-group">
+                <label for="documentType">書類種別</label>
+                <select id="documentType" name="documentType">
+                  <option value="estimate">見積書</option>
+                  <option value="delivery">納品書</option>
+                  <option value="invoice">請求書</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="documentIssueDate">発行日</label>
+                <input id="documentIssueDate" name="documentIssueDate" type="date" required />
+              </div>
+              <div class="field-group">
+                <label for="documentDueDate">期限日・支払期限</label>
+                <input id="documentDueDate" name="documentDueDate" type="date" />
+              </div>
+              <div class="field-group">
+                <label for="documentClient">送付先</label>
+                <input id="documentClient" name="documentClient" type="text" placeholder="会社名・団体名" required />
+              </div>
+              <div class="field-group">
+                <label for="documentContact">宛名</label>
+                <input id="documentContact" name="documentContact" type="text" placeholder="ご担当者様、代表者様など" />
+              </div>
+              <div class="field-group">
+                <label for="documentTitle">件名</label>
+                <input id="documentTitle" name="documentTitle" type="text" placeholder="例: 6月広告放送枠" required />
+              </div>
+              <div class="field-group">
+                <label for="documentAmount">金額</label>
+                <input id="documentAmount" name="documentAmount" type="number" min="0" step="1" placeholder="0" />
+              </div>
+              <div class="field-group">
+                <label for="documentStatus">ステータス</label>
+                <select id="documentStatus" name="documentStatus">
+                  <option value="draft">下書き</option>
+                  <option value="ready">送付待ち</option>
+                  <option value="sent">送付済み</option>
+                  <option value="paid">入金済み</option>
+                  <option value="cancelled">取り下げ</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="documentFileRef">ファイル名・URL・保管場所</label>
+                <input id="documentFileRef" name="documentFileRef" type="text" placeholder="例: 請求書_6月広告放送枠.pdf" />
+              </div>
+              <div class="field-group">
+                <label for="documentMemo">メモ</label>
+                <textarea id="documentMemo" name="documentMemo" rows="4" placeholder="送付方法、確認事項、メール本文メモなど"></textarea>
+              </div>
+              <button class="primary-button full-width" type="submit">書類情報を保存</button>
+            </form>
+          </section>
+
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">送付運用</p>
+              <h2>メール連携前の使い方</h2>
+            </div>
+            <div class="flow-list">
+              <p class="import-note">一覧の「送付文コピー」でメール本文を作成し、Gmail等へ貼り付けて送付できます。送付後は「送付済み」、入金確認後は「入金済み」に変更します。</p>
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

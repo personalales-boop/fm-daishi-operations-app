@@ -1,0 +1,36 @@
+{
+  "name": "FM大師 業務管理",
+  "short_name": "FM大師業務",
+  "description": "FM大師スタッフ向けのシフト、放送資料、音楽選曲をまとめて管理するウェブアプリです。",
+  "id": "./",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "browser"],
+  "background_color": "#f5f6f4",
+  "theme_color": "#087f8c",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "今日のシフト",
+      "short_name": "今日",
+      "url": "./?view=today",
+      "description": "今日の担当を確認します"
+    },
+    {
+      "name": "シフト連絡",
+      "short_name": "掲示板",
+      "url": "./?view=board",
+      "description": "欠勤や交代依頼を投稿します"
+    }
+  ]
+}

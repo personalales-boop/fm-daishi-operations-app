@@ -1,0 +1,9 @@
+{
+  "name": "fm-daishi-shift-app",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app.js"
+  }
+}
