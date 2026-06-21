@@ -7,19 +7,24 @@ const PORT = Number(process.env.PORT || 8000);
 const ROOT_DIR = __dirname;
 const DATA_DIR = path.join(ROOT_DIR, "data");
 const STORE_FILE = path.join(DATA_DIR, "store.json");
+const SCHEDULE_MASTER_FILE = path.join(DATA_DIR, "schedule-masters.json");
 const MAX_BODY_BYTES = 1024 * 1024;
 
+const scheduleMasters = loadScheduleMasters();
+const defaultShiftSlots = createDefaultShiftSlots();
+
 const staffMembers = [
-  { id: "shimizu", name: "清水 暁", role: "パーソナリティ", color: "#087f8c" },
-  { id: "suyama", name: "須山 成美", role: "パーソナリティ", color: "#c94e3b" },
-  { id: "sakamoto_tadashi", name: "坂本 匡", role: "パーソナリティ", color: "#a87400" },
-  { id: "sakamoto_yumiko", name: "坂本 由美子", role: "パーソナリティ", color: "#2f8f5b" },
-  { id: "aoki", name: "青木 朋美", role: "パーソナリティ", color: "#576b95" },
-  { id: "madokawa", name: "窓川 唯良", role: "パーソナリティ", color: "#9a5b33" },
-  { id: "sato_takashi", name: "佐藤 隆", role: "パーソナリティ", color: "#7d5f9f" },
-  { id: "kaminaga", name: "神永 直樹", role: "パーソナリティ", color: "#3f7d5a" },
-  { id: "tazawa", name: "田沢 一郎", role: "パーソナリティ", color: "#b54b6a" },
-  { id: "uruchida", name: "粳田 浩介", role: "パーソナリティ", color: "#4f6f52" },
+  createStaff("shimizu", "SH", "清水 暁", "#087f8c"),
+  createStaff("suyama", "SY", "須山 成美", "#c94e3b"),
+  createStaff("sakamoto_tadashi", "SK", "坂本 匡", "#a87400"),
+  createStaff("sakamoto_yumiko", "YS", "坂本 由美子", "#2f8f5b"),
+  createStaff("aoki", "AO", "青木 朋美", "#576b95"),
+  createStaff("madokawa", "MD", "窓川 唯良", "#9a5b33"),
+  createStaff("sato_takashi", "ST", "佐藤 隆", "#7d5f9f"),
+  createStaff("kaminaga", "KG", "神永 直樹", "#3f7d5a"),
+  createStaff("tazawa", "TZ", "田沢 一郎", "#b54b6a"),
+  createStaff("uruchida", "UR", "粳田 浩介", "#4f6f52"),
+  createStaff("is", "IS", "IS（氏名未設定）", "#3d6f8e"),
 ];
 
 const adminStaffIds = new Set(["shimizu", "suyama"]);
@@ -34,6 +39,7 @@ const initialPins = {
   kaminaga: "1108",
   tazawa: "1109",
   uruchida: "1110",
+  is: "1111",
 };
 
 const loginUsers = staffMembers.map((staff) => ({
@@ -56,11 +62,7 @@ const loginUsers = staffMembers.map((staff) => ({
   },
 ]);
 
-let shiftSlots = [
-  { id: "morning", label: "朝の情報枠", short: "朝", time: "08:00-10:00", className: "morning" },
-  { id: "midday", label: "昼ニュース", short: "昼", time: "12:00-13:30", className: "midday" },
-  { id: "evening", label: "夕方番組", short: "夕", time: "17:00-19:00", className: "evening" },
-];
+let shiftSlots = defaultShiftSlots.map((slot) => ({ ...slot }));
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -97,11 +99,55 @@ server.listen(PORT, () => {
   console.log(`FM Daishi shift app running at http://localhost:${PORT}`);
 });
 
+function loadScheduleMasters() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(SCHEDULE_MASTER_FILE, "utf8"));
+    return {
+      abilityDefinitions: Array.isArray(parsed.abilityDefinitions) ? parsed.abilityDefinitions : [],
+      staffAbilities: parsed.staffAbilities || {},
+      weeklyAvailability: Array.isArray(parsed.weeklyAvailability) ? parsed.weeklyAvailability : [],
+      originalPrograms: Array.isArray(parsed.originalPrograms) ? parsed.originalPrograms : [],
+    };
+  } catch {
+    return {
+      abilityDefinitions: [],
+      staffAbilities: {},
+      weeklyAvailability: [],
+      originalPrograms: [],
+    };
+  }
+}
+
+function createDefaultShiftSlots() {
+  return Array.from({ length: 9 }, (_, index) => {
+    const hour = index + 9;
+    return {
+      id: `hour_${pad(hour)}`,
+      label: `${pad(hour)}:00枠`,
+      short: `${hour}時`,
+      time: `${pad(hour)}:00-${pad(hour + 1)}:00`,
+      className: "hour-slot",
+    };
+  });
+}
+
+function createStaff(id, code, name, color) {
+  return {
+    id,
+    code,
+    name,
+    role: "パーソナリティ",
+    abilities: scheduleMasters.staffAbilities?.[id] || [],
+    color,
+  };
+}
+
 async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/config") {
     sendJson(res, 200, {
       staffMembers,
       shiftSlots,
+      scheduleMasters,
       users: loginUsers.map(publicUser),
     });
     return;
@@ -336,7 +382,7 @@ async function handleApi(req, res, url) {
     const body = await readJsonBody(req);
     const month = normalizeMonth(body.month);
     ensureMonth(store, month);
-    store.schedules.draft[month] = generateMonthSchedule(month);
+    store.schedules.draft[month] = generateMonthSchedule(month, store);
     store.workflow[month].draftSharedAt = null;
     addAudit(session.user, "仮シフト自動作成", `${formatMonthLabel(month)}の仮シフトを作り直しました。`);
     saveAndBroadcast(true);
@@ -1142,6 +1188,12 @@ function normalizeSlotValue(value) {
   if (!text) return "";
   const exact = shiftSlots.find((slot) => slot.id === text || slot.label === text || slot.short === text);
   if (exact) return exact.id;
+  const hourMatch = text.match(/(\d{1,2})/);
+  if (hourMatch) {
+    const hour = Number(hourMatch[1]);
+    const hourSlot = shiftSlots.find((slot) => getSlotHour(slot) === hour);
+    if (hourSlot) return hourSlot.id;
+  }
   const fuzzy = shiftSlots.find((slot) => text.includes(slot.label) || text.includes(slot.short) || slot.label.includes(text));
   return fuzzy?.id || "";
 }
@@ -1150,7 +1202,9 @@ function normalizeStaffValue(value) {
   const text = String(value || "").trim();
   if (!text) return "";
   const normalized = text.replace(/\s+/g, "");
-  const exact = staffMembers.find((staff) => staff.id === text || staff.name === text || staff.name.replace(/\s+/g, "") === normalized);
+  const exact = staffMembers.find((staff) => {
+    return staff.id === text || staff.code === text.toUpperCase() || staff.name === text || staff.name.replace(/\s+/g, "") === normalized;
+  });
   if (exact) return exact.id;
   const fuzzy = staffMembers.find((staff) => {
     const staffName = staff.name.replace(/\s+/g, "");
@@ -1269,18 +1323,21 @@ function createDefaultStore() {
 }
 
 function normalizeStore(value) {
-  if (Array.isArray(value.shiftSlots) && value.shiftSlots.length) {
+  const legacySlots = isLegacyShiftSlots(value.shiftSlots);
+  if (Array.isArray(value.shiftSlots) && value.shiftSlots.length && !legacySlots) {
     shiftSlots = value.shiftSlots;
+  } else {
+    shiftSlots = defaultShiftSlots.map((slot) => ({ ...slot }));
   }
   const defaultProfiles = createDefaultStaffProfiles();
   const next = {
     schedules: {
-      draft: value.schedules?.draft || {},
-      final: value.schedules?.final || {},
+      draft: normalizeMonthScheduleMap(value.schedules?.draft || {}, legacySlots, null),
+      final: normalizeMonthScheduleMap(value.schedules?.final || {}, legacySlots, value.schedules?.draft || {}),
     },
     workflow: value.workflow || {},
-    board: Array.isArray(value.board) ? value.board : [],
-    availability: Array.isArray(value.availability) ? value.availability : [],
+    board: normalizeSlotReferences(Array.isArray(value.board) ? value.board : []),
+    availability: normalizeSlotReferences(Array.isArray(value.availability) ? value.availability : []),
     staffProfiles: { ...defaultProfiles, ...(value.staffProfiles || {}) },
     contentItems: Array.isArray(value.contentItems) ? value.contentItems : seedContentItems(monthKey(new Date())),
     musicLibrary: Array.isArray(value.musicLibrary) ? value.musicLibrary : seedMusicLibrary(),
@@ -1293,6 +1350,43 @@ function normalizeStore(value) {
   };
   ensureMonth(next, monthKey(new Date()));
   return next;
+}
+
+function isLegacyShiftSlots(slots) {
+  if (!Array.isArray(slots) || !slots.length) return true;
+  return slots.some((slot) => ["morning", "midday", "evening"].includes(slot.id));
+}
+
+function normalizeMonthScheduleMap(monthSchedules, legacySlots, draftSource) {
+  const result = {};
+  Object.keys(monthSchedules || {}).forEach((month) => {
+    if (legacySlots || scheduleUsesLegacySlots(monthSchedules[month])) {
+      result[month] = draftSource ? cloneSchedule(result[month] || generateMonthSchedule(month, null)) : generateMonthSchedule(month, null);
+    } else {
+      result[month] = cloneSchedule(monthSchedules[month]);
+    }
+  });
+  return result;
+}
+
+function scheduleUsesLegacySlots(monthSchedule) {
+  return Object.values(monthSchedule || {}).some((daySchedule) => {
+    return Object.keys(daySchedule || {}).some((slotId) => ["morning", "midday", "evening"].includes(slotId));
+  });
+}
+
+function normalizeSlotReferences(items) {
+  return items.map((item) => ({
+    ...item,
+    slot: normalizeLegacySlotId(item.slot),
+  }));
+}
+
+function normalizeLegacySlotId(slotId) {
+  if (slotId === "morning") return "hour_09";
+  if (slotId === "midday") return "hour_12";
+  if (slotId === "evening") return "hour_17";
+  return slotId;
 }
 
 function saveAndBroadcast(shouldBroadcast) {
@@ -1311,7 +1405,7 @@ function writeStore(next) {
 function ensureMonth(targetStore, month) {
   const normalized = normalizeMonth(month);
   if (!targetStore.schedules.draft[normalized]) {
-    targetStore.schedules.draft[normalized] = generateMonthSchedule(normalized);
+    targetStore.schedules.draft[normalized] = generateMonthSchedule(normalized, targetStore);
   }
   ensureScheduleSlots(targetStore.schedules.draft[normalized]);
   if (targetStore.schedules.final[normalized]) {
@@ -1334,25 +1428,148 @@ function ensureMonth(targetStore, month) {
   if (!targetStore.musicSchedule[normalized]) targetStore.musicSchedule[normalized] = {};
 }
 
-function generateMonthSchedule(month) {
+function generateMonthSchedule(month, targetStore = null) {
   const { year, monthIndex } = parseMonth(month);
   const totalDays = new Date(year, monthIndex + 1, 0).getDate();
   const schedule = {};
+  const assignmentCounts = new Map(staffMembers.map((staff) => [staff.id, 0]));
 
   for (let day = 1; day <= totalDays; day += 1) {
     const date = new Date(year, monthIndex, day);
     const iso = formatISO(date);
-    const weekendOffset = [0, 6].includes(date.getDay()) ? 1 : 0;
     schedule[iso] = {};
 
-    shiftSlots.forEach((slot, slotIndex) => {
-      const first = staffMembers[(day + slotIndex * 2 + weekendOffset) % staffMembers.length].id;
-      const second = staffMembers[(day + slotIndex * 2 + 3) % staffMembers.length].id;
-      schedule[iso][slot.id] = date.getDay() === 0 ? [first] : [first, second];
+    shiftSlots.forEach((slot) => {
+      const program = findOriginalProgram(date, getSlotHour(slot));
+      const staffIds = program
+        ? getOriginalProgramStaffIds(program)
+        : pickAvailableStaffForSlot(date, slot, schedule[iso], assignmentCounts, targetStore);
+      schedule[iso][slot.id] = staffIds;
+      staffIds.forEach((staffId) => assignmentCounts.set(staffId, (assignmentCounts.get(staffId) || 0) + 1));
     });
   }
 
   return schedule;
+}
+
+function pickAvailableStaffForSlot(date, slot, daySchedule, assignmentCounts, targetStore) {
+  const hour = getSlotHour(slot);
+  const weekday = date.getDay();
+  const iso = formatISO(date);
+  const availableStaffIds = getMasterAvailableStaffIds(weekday, hour);
+  const explicitAvailableIds = getAvailabilityItems(targetStore)
+    .filter((item) => {
+      return item.date === iso && item.type === "available" && (item.slot === "all" || item.slot === slot.id);
+    })
+    .map((item) => item.staffId);
+  const pool = [...new Set([...explicitAvailableIds, ...availableStaffIds])].filter((staffId) => {
+    return staffMembers.some((staff) => staff.id === staffId) && !hasOffConflict(staffId, iso, slot.id, targetStore);
+  });
+  const fallbackPool = staffMembers
+    .map((staff) => staff.id)
+    .filter((staffId) => !hasOffConflict(staffId, iso, slot.id, targetStore));
+  const candidates = pool.length ? pool : fallbackPool;
+
+  const chosen = candidates
+    .map((staffId) => {
+      const dayCount = countStaffInDay(daySchedule, staffId);
+      const profilePenalty = staffProfileMentionsWeekday(staffId, weekday, targetStore) ? 20 : 0;
+      const explicitBoost = explicitAvailableIds.includes(staffId) ? -8 : 0;
+      const masterBoost = availableStaffIds.includes(staffId) ? -4 : 0;
+      return {
+        staffId,
+        score: (assignmentCounts.get(staffId) || 0) * 10 + dayCount * 6 + profilePenalty + explicitBoost + masterBoost,
+      };
+    })
+    .sort((a, b) => a.score - b.score || getStaffSortKey(a.staffId).localeCompare(getStaffSortKey(b.staffId)))[0];
+
+  return chosen ? [chosen.staffId] : [];
+}
+
+function getMasterAvailableStaffIds(weekday, hour) {
+  return (scheduleMasters.weeklyAvailability || [])
+    .filter((item) => Number(item.weekday) === weekday && (item.hours || []).map(Number).includes(hour))
+    .map((item) => codeToStaffId(item.staffCode))
+    .filter(Boolean);
+}
+
+function getOriginalProgramStaffIds(program) {
+  const orderedAbilities = ["P1", "MA", "P", "M", "A"];
+  return orderedAbilities
+    .map((ability) => program.assignments?.[ability])
+    .filter(Boolean)
+    .map(codeToStaffId)
+    .filter(Boolean)
+    .filter((staffId, index, array) => array.indexOf(staffId) === index)
+    .slice(0, 2);
+}
+
+function findOriginalProgram(date, hour) {
+  const weekday = date.getDay();
+  const weekNumber = Math.floor((date.getDate() - 1) / 7) + 1;
+  return (scheduleMasters.originalPrograms || []).find((program) => {
+    return Number(program.weekday) === weekday && Number(program.hour) === hour && matchesWeekRule(program.weekRule, weekNumber);
+  });
+}
+
+function matchesWeekRule(rule, weekNumber) {
+  const normalized = normalizeRuleText(rule);
+  if (!normalized || normalized === "毎週") return true;
+  const numbers = normalized.match(/\d+/g)?.map(Number) || [];
+  return numbers.includes(weekNumber);
+}
+
+function normalizeRuleText(rule) {
+  return String(rule || "")
+    .replace(/[０-９]/g, (char) => String(char.charCodeAt(0) - 0xff10))
+    .replace(/[，、]/g, ",")
+    .replace(/第/g, "第")
+    .trim();
+}
+
+function codeToStaffId(code) {
+  const normalized = String(code || "").trim().toUpperCase();
+  if (!normalized) return "";
+  const staff = staffMembers.find((item) => item.code === normalized || item.id.toUpperCase() === normalized);
+  return staff?.id || "";
+}
+
+function getSlotHour(slot) {
+  const fromId = String(slot.id || "").match(/(\d{1,2})/);
+  if (fromId) return Number(fromId[1]);
+  const fromTime = String(slot.time || slot.label || "").match(/(\d{1,2})[:時]/);
+  return fromTime ? Number(fromTime[1]) : 0;
+}
+
+function getAvailabilityItems(targetStore) {
+  return Array.isArray(targetStore?.availability) ? targetStore.availability : [];
+}
+
+function hasOffConflict(staffId, date, slotId, targetStore) {
+  return getAvailabilityItems(targetStore).some((item) => {
+    return item.staffId === staffId && item.date === date && item.type === "off" && (item.slot === "all" || item.slot === slotId);
+  });
+}
+
+function staffProfileMentionsWeekday(staffId, weekday, targetStore) {
+  const note = targetStore?.staffProfiles?.[staffId]?.unavailableNote || "";
+  return note ? mentionsWeekday(note, weekday) : false;
+}
+
+function countStaffInDay(daySchedule, staffId) {
+  return Object.values(daySchedule || {}).reduce((count, staffIds) => {
+    return count + (Array.isArray(staffIds) && staffIds.includes(staffId) ? 1 : 0);
+  }, 0);
+}
+
+function getStaffSortKey(staffId) {
+  return getStaff(staffId)?.code || staffId;
+}
+
+function mentionsWeekday(note, dayIndex) {
+  const labels = ["日", "月", "火", "水", "木", "金", "土"];
+  const label = labels[dayIndex];
+  return String(note || "").includes(`${label}曜`) || String(note || "").includes(label);
 }
 
 function seedBoard(month) {
@@ -1365,10 +1582,10 @@ function seedBoard(month) {
       id: `seed-${month}-swap`,
       type: "swapConfirmed",
       date: fourth,
-      slot: "evening",
+      slot: "hour_17",
       fromStaff: "aoki",
       toStaff: "madokawa",
-      message: "青木 朋美さんの夕方番組を窓川 唯良さんが代わります。窓川さんの承諾後、管理者承認へ進みます。",
+      message: "青木 朋美さんの17時枠を窓川 唯良さんが代わります。窓川さんの承諾後、管理者承認へ進みます。",
       status: "pendingConsent",
       createdBy: "aoki",
       createdByName: "青木 朋美",
@@ -1387,10 +1604,10 @@ function seedBoard(month) {
       id: `seed-${month}-absence`,
       type: "absence",
       date: sixth,
-      slot: "midday",
+      slot: "hour_12",
       fromStaff: "suyama",
       toStaff: "",
-      message: "昼ニュースに入れなくなりました。交代できる方がいればお願いします。",
+      message: "12時枠に入れなくなりました。交代できる方がいればお願いします。",
       status: "open",
       createdBy: "suyama",
       createdByName: "須山 成美",
@@ -1409,7 +1626,7 @@ function seedBoard(month) {
       id: `seed-${month}-notice`,
       type: "notice",
       date: tenth,
-      slot: "morning",
+      slot: "hour_09",
       fromStaff: "sakamoto_yumiko",
       toStaff: "",
       message: "川崎区役所からの地域情報を朝の枠で必ず読み上げます。担当者は台本確認をお願いします。",
@@ -1436,7 +1653,7 @@ function seedAvailability(month) {
       id: `seed-${month}-off-suyama`,
       staffId: "suyama",
       date: `${month}-06`,
-      slot: "midday",
+      slot: "hour_12",
       type: "off",
       note: "昼ニュースは難しいため交代希望",
       createdAt: addMinutes(new Date(), -34).toISOString(),
@@ -1664,7 +1881,7 @@ function createDefaultStaffProfiles() {
       {
         staffId: staff.id,
         contact: "",
-        skills: "パーソナリティ",
+        skills: `${staff.code} / ${(staff.abilities || []).join("・") || "P"}`,
         unavailableNote: "",
         updatedAt: null,
         updatedBy: null,
@@ -1806,7 +2023,7 @@ function createSystemPost(month, type, message, user) {
     id: crypto.randomUUID(),
     type,
     date: `${month}-01`,
-    slot: "morning",
+    slot: "hour_09",
     fromStaff: user.staffId || "shimizu",
     toStaff: "",
     message,

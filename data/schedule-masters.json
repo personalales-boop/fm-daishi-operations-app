@@ -1,0 +1,177 @@
+{
+  "abilityDefinitions": [
+    {
+      "code": "P1",
+      "name": "ワンマン",
+      "description": "ミキサー操作しながら喋る"
+    },
+    {
+      "code": "P",
+      "name": "パーソナリティー",
+      "description": "喋る人"
+    },
+    {
+      "code": "M",
+      "name": "ミキサー",
+      "description": "ミキサー操作"
+    },
+    {
+      "code": "A",
+      "name": "アシスタント",
+      "description": "補助として喋る"
+    },
+    {
+      "code": "MA",
+      "name": "ミキサーアシスタント",
+      "description": "ミキサーしながら補助として喋る"
+    }
+  ],
+  "staffAbilities": {
+    "shimizu": ["P", "A"],
+    "suyama": ["P1", "P", "M", "A", "MA"],
+    "sakamoto_tadashi": ["P1", "P", "M", "MA"],
+    "sakamoto_yumiko": ["P", "A"],
+    "aoki": ["P", "A"],
+    "madokawa": ["P", "A"],
+    "sato_takashi": ["P1", "P", "M", "MA"],
+    "kaminaga": ["P", "M", "A"],
+    "tazawa": ["P", "A"],
+    "uruchida": ["P", "A"],
+    "is": ["P", "A"]
+  },
+  "weeklyAvailability": [
+    { "weekday": 1, "weekdayLabel": "月", "staffCode": "ST", "hours": [9, 10, 12] },
+    { "weekday": 1, "weekdayLabel": "月", "staffCode": "TZ", "hours": [11, 13, 14] },
+    { "weekday": 1, "weekdayLabel": "月", "staffCode": "SY", "hours": [15, 16, 17] },
+    { "weekday": 2, "weekdayLabel": "火", "staffCode": "ST", "hours": [9, 10] },
+    { "weekday": 2, "weekdayLabel": "火", "staffCode": "TZ", "hours": [11, 12, 13] },
+    { "weekday": 2, "weekdayLabel": "火", "staffCode": "YS", "hours": [14] },
+    { "weekday": 2, "weekdayLabel": "火", "staffCode": "AO", "hours": [14, 15, 17] },
+    { "weekday": 2, "weekdayLabel": "火", "staffCode": "SY", "hours": [15, 16, 17] },
+    { "weekday": 3, "weekdayLabel": "水", "staffCode": "ST", "hours": [9, 10, 16, 17] },
+    { "weekday": 3, "weekdayLabel": "水", "staffCode": "SY", "hours": [11, 12, 13] },
+    { "weekday": 3, "weekdayLabel": "水", "staffCode": "IS", "hours": [14, 15] },
+    { "weekday": 4, "weekdayLabel": "木", "staffCode": "ST", "hours": [9, 11, 12] },
+    { "weekday": 4, "weekdayLabel": "木", "staffCode": "SY", "hours": [10, 14, 17] },
+    { "weekday": 4, "weekdayLabel": "木", "staffCode": "TZ", "hours": [13, 15, 16] },
+    { "weekday": 4, "weekdayLabel": "木", "staffCode": "KG", "hours": [13, 16] },
+    { "weekday": 4, "weekdayLabel": "木", "staffCode": "SH", "hours": [14, 17] },
+    { "weekday": 5, "weekdayLabel": "金", "staffCode": "ST", "hours": [9, 10, 11, 13] },
+    { "weekday": 5, "weekdayLabel": "金", "staffCode": "TZ", "hours": [12] },
+    { "weekday": 5, "weekdayLabel": "金", "staffCode": "IS", "hours": [14, 15] },
+    { "weekday": 5, "weekdayLabel": "金", "staffCode": "SY", "hours": [16, 17] },
+    { "weekday": 6, "weekdayLabel": "土", "staffCode": "TZ", "hours": [9, 10, 13] },
+    { "weekday": 6, "weekdayLabel": "土", "staffCode": "SY", "hours": [11, 12, 16, 17] },
+    { "weekday": 6, "weekdayLabel": "土", "staffCode": "IS", "hours": [14, 15] },
+    { "weekday": 0, "weekdayLabel": "日", "staffCode": "TZ", "hours": [9, 10, 11, 12] },
+    { "weekday": 0, "weekdayLabel": "日", "staffCode": "KG", "hours": [9, 10] },
+    { "weekday": 0, "weekdayLabel": "日", "staffCode": "UR", "hours": [13, 14, 15] },
+    { "weekday": 0, "weekdayLabel": "日", "staffCode": "ST", "hours": [16, 17] }
+  ],
+  "originalPrograms": [
+    {
+      "weekday": 2,
+      "weekdayLabel": "火",
+      "weekRule": "第3",
+      "hour": 10,
+      "assignments": { "MA": "SY", "A": "SH" },
+      "title": "月いち臨港消防ばなし"
+    },
+    {
+      "weekday": 2,
+      "weekdayLabel": "火",
+      "weekRule": "毎週",
+      "hour": 15,
+      "assignments": { "MA": "SY", "A": "SH" },
+      "title": "まんまるさんの和こころ便り"
+    },
+    {
+      "weekday": 2,
+      "weekdayLabel": "火",
+      "weekRule": "毎週",
+      "hour": 17,
+      "assignments": { "MA": "SY", "A": "AO" },
+      "title": "アイスタッフのお任せ介護"
+    },
+    {
+      "weekday": 3,
+      "weekdayLabel": "水",
+      "weekRule": "第3",
+      "hour": 10,
+      "assignments": { "MA": "SY", "A": "SH" },
+      "title": "ねんきんラジオ1130"
+    },
+    {
+      "weekday": 3,
+      "weekdayLabel": "水",
+      "weekRule": "第1",
+      "hour": 10,
+      "assignments": { "MA": "SK" },
+      "title": "人形工房はやしやのやさしい時間"
+    },
+    {
+      "weekday": 3,
+      "weekdayLabel": "水",
+      "weekRule": "毎週",
+      "hour": 13,
+      "assignments": { "MA": "SY" },
+      "title": "アイスタッフのご長寿ラジオ"
+    },
+    {
+      "weekday": 4,
+      "weekdayLabel": "木",
+      "weekRule": "第2,4",
+      "hour": 10,
+      "assignments": { "MA": "SY" },
+      "title": "保険であんしんラジオ"
+    },
+    {
+      "weekday": 4,
+      "weekdayLabel": "木",
+      "weekRule": "第1",
+      "hour": 10,
+      "assignments": { "MA": "ST" },
+      "title": "身体の声を聞こう"
+    },
+    {
+      "weekday": 4,
+      "weekdayLabel": "木",
+      "weekRule": "毎週",
+      "hour": 14,
+      "assignments": { "MA": "SY", "A": "SH" },
+      "title": "ActiveLife HappyLife"
+    },
+    {
+      "weekday": 4,
+      "weekdayLabel": "木",
+      "weekRule": "毎週",
+      "hour": 17,
+      "assignments": { "MA": "SY", "A": "SH" },
+      "title": "社長の時間"
+    },
+    {
+      "weekday": 5,
+      "weekdayLabel": "金",
+      "weekRule": "第2",
+      "hour": 10,
+      "assignments": { "MA": "SK" },
+      "title": "いとよしさんちの「いとよき日々」"
+    },
+    {
+      "weekday": 5,
+      "weekdayLabel": "金",
+      "weekRule": "毎週",
+      "hour": 17,
+      "assignments": { "MA": "SY" },
+      "title": "もうそうブラブラ散歩"
+    },
+    {
+      "weekday": 0,
+      "weekdayLabel": "日",
+      "weekRule": "第4",
+      "hour": 11,
+      "assignments": { "MA": "SY", "A": "SH" },
+      "title": "ボクシングタイム"
+    }
+  ]
+}

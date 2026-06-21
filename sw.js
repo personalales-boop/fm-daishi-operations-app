@@ -1,4 +1,4 @@
-const CACHE_NAME = "fm-daishi-operations-v13";
+const CACHE_NAME = "fm-daishi-operations-v14";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_SHELL = [
   "./manifest.webmanifest",
   "./icon.svg",
   "./data/store.json",
+  "./data/schedule-masters.json",
 ];
 
 self.addEventListener("install", (event) => {

@@ -331,7 +331,7 @@
               </div>
               <div class="field-group">
                 <label for="csvPasteText">CSV貼り付け</label>
-                <textarea id="csvPasteText" name="csvPasteText" rows="5" placeholder="日付,担当枠,主担当,補助担当&#10;2026-06-03,朝の情報枠,清水 暁,須山 成美"></textarea>
+                <textarea id="csvPasteText" name="csvPasteText" rows="5" placeholder="日付,担当枠,主担当,補助担当&#10;2026-06-03,10時,清水 暁,須山 成美"></textarea>
               </div>
               <button class="ghost-button full-width" id="previewCsvButton" type="button">CSV内容を確認</button>
               <div class="csv-preview-list" id="csvPreviewList"></div>
@@ -346,6 +346,14 @@
             </div>
             <form id="slotMasterForm" class="master-form"></form>
             <button class="primary-button full-width" id="saveSlotsButton" type="button">番組枠を保存</button>
+          </section>
+
+          <section class="tool-panel admin-panel">
+            <div class="panel-heading">
+              <p class="section-label">自動作成条件</p>
+              <h2>シフト自動化マスター</h2>
+            </div>
+            <div class="automation-master-list" id="automationMasterList"></div>
           </section>
 
           <section class="tool-panel admin-panel">

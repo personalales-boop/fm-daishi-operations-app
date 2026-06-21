@@ -577,6 +577,12 @@ body.is-staff .status-strip {
   border-radius: var(--radius);
 }
 
+.day-card.has-hourly-slots {
+  min-height: 360px;
+  gap: 6px;
+  padding: 7px;
+}
+
 .day-card.is-muted {
   opacity: 0.44;
 }
@@ -718,6 +724,22 @@ body.is-staff .status-strip {
   border-radius: 7px;
 }
 
+.day-card.has-hourly-slots .slot-list {
+  gap: 4px;
+}
+
+.day-card.has-hourly-slots .shift-row {
+  min-height: 30px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 5px;
+  padding: 4px;
+}
+
+.shift-row.has-program {
+  border-color: #d7c48b;
+  background: #fffaf0;
+}
+
 .slot-code {
   display: inline-flex;
   width: 28px;
@@ -737,6 +759,10 @@ body.is-staff .status-strip {
 
 .slot-code.evening {
   background: var(--coral);
+}
+
+.slot-code.hour-slot {
+  background: #576b95;
 }
 
 .staff-stack {
@@ -780,6 +806,69 @@ body.is-staff .status-strip {
 .staff-chip.is-focused {
   border-color: var(--coral);
   box-shadow: 0 0 0 2px rgba(201, 78, 59, 0.2);
+}
+
+.program-mini {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 2px 5px;
+  color: #5b4212;
+  background: #f8e8b4;
+  border: 1px solid #e2c46b;
+  border-radius: 5px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.automation-master-list,
+.master-summary-item {
+  display: grid;
+  gap: 8px;
+}
+
+.master-summary-item {
+  padding: 10px;
+  background: #f7faf7;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.master-summary-item strong {
+  color: var(--ink);
+  font-size: 0.84rem;
+}
+
+.master-summary-item span,
+.master-summary-item li {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.master-summary-item ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.weekday-availability {
+  display: grid;
+  gap: 4px;
+}
+
+.weekday-availability span {
+  display: block;
+}
+
+.weekday-availability strong {
+  display: inline-flex;
+  min-width: 22px;
+  margin-right: 4px;
+  font-size: 0.76rem;
 }
 
 .own-marker {
