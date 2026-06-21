@@ -71,8 +71,6 @@
           <button class="ghost-button icon-button" id="nextMonth" type="button" aria-label="次の月">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
           </button>
-          <button class="primary-button admin-control" id="shareDraftButton" type="button">仮シフトを共有</button>
-          <button class="danger-button admin-control" id="finalizeButton" type="button">確定シフトにする</button>
           <button class="ghost-button" id="installButton" type="button" hidden>ホームに追加</button>
           <button class="ghost-button" id="notifyButton" type="button">通知を有効化</button>
           <button class="ghost-button" id="logoutButton" type="button">ログアウト</button>
@@ -88,8 +86,8 @@
       </nav>
 
       <main class="workspace module-panel active" id="shiftModule" data-module-panel="shift">
-        <section class="main-column" aria-label="月間シフトと掲示板">
-          <div class="calendar-toolbar">
+        <section class="main-column" aria-label="シフト管理">
+          <div class="calendar-toolbar shift-toolbar">
             <div>
               <p class="section-label">月間シフト</p>
               <h2 id="monthTitle">----</h2>
@@ -103,95 +101,328 @@
 
           <div class="status-strip" id="statusStrip" aria-live="polite"></div>
 
-          <section class="today-summary-section" aria-labelledby="todaySummaryTitle">
-            <div class="section-heading compact-heading">
+          <section class="shift-command-center admin-panel" aria-label="シフト運用">
+            <div class="shift-command-card">
               <div>
-                <p class="section-label">すぐ確認</p>
-                <h2 id="todaySummaryTitle">今日・明日の担当</h2>
+                <p class="section-label">月次フロー</p>
+                <h2>作成・共有</h2>
               </div>
-              <button class="ghost-button compact-action" id="copyTodayTomorrowButton" type="button">共有文をコピー</button>
+              <div class="quick-action-grid">
+                <button class="primary-button" id="shareDraftButton" type="button">仮シフトを共有</button>
+                <button class="danger-button" id="finalizeButton" type="button">確定シフトにする</button>
+                <button class="ghost-button" id="autoDraftButton" type="button">今月の仮シフトを自動作成</button>
+                <button class="ghost-button" id="exportButton" type="button">シフトCSV出力</button>
+                <button class="ghost-button" id="backupButton" type="button">バックアップJSON出力</button>
+                <button class="ghost-button" id="resetButton" type="button">デモデータに戻す</button>
+              </div>
             </div>
-            <div class="top-assignment-list" id="topAssignmentList"></div>
+
+            <div class="shift-command-card shift-approval-card">
+              <div class="section-heading compact-heading">
+                <div>
+                  <p class="section-label">承認フロー</p>
+                  <h2>承認待ち</h2>
+                </div>
+                <button class="ghost-button compact-action" type="button" data-shift-tab="requests">提出を開く</button>
+              </div>
+              <div class="approval-list compact-list" id="approvalList"></div>
+            </div>
           </section>
 
-          <div class="calendar-shell" aria-label="1ヶ月のシフト表">
-            <div class="weekday-row" aria-hidden="true">
-              <span>月</span>
-              <span>火</span>
-              <span>水</span>
-              <span>木</span>
-              <span>金</span>
-              <span>土</span>
-              <span>日</span>
-            </div>
-            <div class="calendar-grid" id="calendarGrid"></div>
-          </div>
+          <nav class="shift-subnav" aria-label="シフト内メニュー">
+            <button class="shift-subtab active" type="button" data-shift-tab="overview">シフト管理</button>
+            <button class="shift-subtab" type="button" data-shift-tab="requests">シフト提出</button>
+            <button class="shift-subtab admin-panel" type="button" data-shift-tab="csv">CSV連携</button>
+            <button class="shift-subtab admin-panel" type="button" data-shift-tab="masters">マスタ管理</button>
+          </nav>
 
-          <section class="board-section" aria-labelledby="boardTitle">
-            <div class="section-heading">
-              <div>
-                <p class="section-label">リアルタイム掲示板</p>
-                <h2 id="boardTitle">シフト連絡</h2>
+          <section class="shift-tab-panel active" data-shift-panel="overview" aria-label="月間シフト">
+            <section class="today-summary-section" aria-labelledby="todaySummaryTitle">
+              <div class="section-heading compact-heading">
+                <div>
+                  <p class="section-label">すぐ確認</p>
+                  <h2 id="todaySummaryTitle">今日・明日の担当</h2>
+                </div>
+                <button class="ghost-button compact-action" id="copyTodayTomorrowButton" type="button">共有文をコピー</button>
               </div>
-              <p class="sync-status" id="syncStatus">同期待機中</p>
-            </div>
-            <div class="board-filter-row">
-              <button class="filter-button active" type="button" data-board-filter="all">すべて</button>
-              <button class="filter-button" type="button" data-board-filter="open">未対応</button>
-              <button class="filter-button" type="button" data-board-filter="mine">自分関連</button>
+              <div class="top-assignment-list" id="topAssignmentList"></div>
+            </section>
+
+            <div class="calendar-shell" aria-label="1ヶ月のシフト表">
+              <div class="weekday-row" aria-hidden="true">
+                <span>月</span>
+                <span>火</span>
+                <span>水</span>
+                <span>木</span>
+                <span>金</span>
+                <span>土</span>
+                <span>日</span>
+              </div>
+              <div class="calendar-grid" id="calendarGrid"></div>
             </div>
 
-            <form class="board-form" id="boardForm">
-              <div class="field-group">
-                <label for="postType">種別</label>
-                <select id="postType" name="postType">
-                  <option value="absence">この日のシフトに行けない</option>
-                  <option value="swapRequest">交換をお願いしたい</option>
-                  <option value="swapConfirmed">交換成立（承認申請）</option>
-                  <option value="notice">連絡事項</option>
-                </select>
-              </div>
-              <div class="field-group">
-                <label for="postDate">日付</label>
-                <input id="postDate" name="postDate" type="date" required />
-              </div>
-              <div class="field-group">
-                <label for="postSlot">担当枠</label>
-                <select id="postSlot" name="postSlot"></select>
-              </div>
-              <div class="field-group admin-field">
-                <label for="fromStaff">対象スタッフ</label>
-                <select id="fromStaff" name="fromStaff"></select>
-              </div>
-              <div class="field-group">
-                <label for="toStaff">交代スタッフ</label>
-                <select id="toStaff" name="toStaff"></select>
-              </div>
-              <div class="field-group wide">
-                <label for="postMessage">内容</label>
-                <textarea id="postMessage" name="postMessage" rows="2" placeholder="例: 体調不良のため、夕方番組の交代をお願いします。"></textarea>
-              </div>
-              <button class="primary-button board-submit" type="submit">投稿する</button>
-            </form>
+            <div class="shift-insight-grid">
+              <section class="tool-panel">
+                <div class="panel-heading">
+                  <p class="section-label">自動チェック</p>
+                  <h2>シフト警告</h2>
+                </div>
+                <div class="issue-list" id="issueList"></div>
+              </section>
 
-            <div class="board-list" id="boardList" aria-live="polite"></div>
+              <section class="tool-panel">
+                <div class="panel-heading">
+                  <p class="section-label">月間集計</p>
+                  <h2>担当回数</h2>
+                </div>
+                <div class="staff-count-list" id="staffCountList"></div>
+              </section>
+            </div>
+
+            <section class="list-section collapsible is-collapsed" aria-labelledby="shiftListTitle" data-collapsible>
+              <div class="section-heading">
+                <div>
+                  <p class="section-label">スマホ向け一覧</p>
+                  <h2 id="shiftListTitle">日別シフト</h2>
+                </div>
+                <button class="collapse-toggle" type="button" data-collapse-target="shiftListBody" aria-expanded="false">開く</button>
+              </div>
+              <div class="collapse-body" id="shiftListBody" hidden>
+                <div class="shift-list" id="shiftList"></div>
+              </div>
+            </section>
           </section>
 
-          <section class="list-section collapsible is-collapsed" aria-labelledby="shiftListTitle" data-collapsible>
-            <div class="section-heading">
-              <div>
-                <p class="section-label">スマホ向け一覧</p>
-                <h2 id="shiftListTitle">日別シフト</h2>
+          <section class="shift-tab-panel" data-shift-panel="requests" aria-label="シフト提出" hidden>
+            <section class="board-section" aria-labelledby="boardTitle">
+              <div class="section-heading">
+                <div>
+                  <p class="section-label">リアルタイム掲示板</p>
+                  <h2 id="boardTitle">シフト連絡</h2>
+                </div>
+                <p class="sync-status" id="syncStatus">同期待機中</p>
               </div>
-              <button class="collapse-toggle" type="button" data-collapse-target="shiftListBody" aria-expanded="false">開く</button>
-            </div>
-            <div class="collapse-body" id="shiftListBody" hidden>
-              <div class="shift-list" id="shiftList"></div>
-            </div>
+              <div class="board-filter-row">
+                <button class="filter-button active" type="button" data-board-filter="all">すべて</button>
+                <button class="filter-button" type="button" data-board-filter="open">未対応</button>
+                <button class="filter-button" type="button" data-board-filter="mine">自分関連</button>
+              </div>
+
+              <form class="board-form" id="boardForm">
+                <div class="field-group">
+                  <label for="postType">種別</label>
+                  <select id="postType" name="postType">
+                    <option value="absence">この日のシフトに行けない</option>
+                    <option value="swapRequest">交換をお願いしたい</option>
+                    <option value="swapConfirmed">交換成立（承認申請）</option>
+                    <option value="notice">連絡事項</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label for="postDate">日付</label>
+                  <input id="postDate" name="postDate" type="date" required />
+                </div>
+                <div class="field-group">
+                  <label for="postSlot">担当枠</label>
+                  <select id="postSlot" name="postSlot"></select>
+                </div>
+                <div class="field-group admin-field">
+                  <label for="fromStaff">対象スタッフ</label>
+                  <select id="fromStaff" name="fromStaff"></select>
+                </div>
+                <div class="field-group">
+                  <label for="toStaff">交代スタッフ</label>
+                  <select id="toStaff" name="toStaff"></select>
+                </div>
+                <div class="field-group wide">
+                  <label for="postMessage">内容</label>
+                  <textarea id="postMessage" name="postMessage" rows="2" placeholder="例: 体調不良のため、夕方番組の交代をお願いします。"></textarea>
+                </div>
+                <button class="primary-button board-submit" type="submit">投稿する</button>
+              </form>
+
+              <div class="board-list" id="boardList" aria-live="polite"></div>
+            </section>
+
+            <section class="tool-panel">
+              <div class="panel-heading">
+                <p class="section-label">希望提出</p>
+                <h2>休み・出勤可</h2>
+              </div>
+              <form id="availabilityForm" class="shift-form">
+                <div class="field-group admin-field">
+                  <label for="availabilityStaff">スタッフ</label>
+                  <select id="availabilityStaff" name="availabilityStaff"></select>
+                </div>
+                <div class="field-group">
+                  <label for="availabilityDate">日付</label>
+                  <input id="availabilityDate" name="availabilityDate" type="date" required />
+                </div>
+                <div class="field-group">
+                  <label for="availabilitySlot">担当枠</label>
+                  <select id="availabilitySlot" name="availabilitySlot">
+                    <option value="all">終日</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label for="availabilityType">種別</label>
+                  <select id="availabilityType" name="availabilityType">
+                    <option value="off">希望休</option>
+                    <option value="available">出勤可能</option>
+                    <option value="note">勤務メモ</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label for="availabilityNote">メモ</label>
+                  <textarea id="availabilityNote" name="availabilityNote" rows="2" placeholder="例: 午前のみ可能、終日不可など"></textarea>
+                </div>
+                <button class="primary-button full-width" type="submit">希望を登録</button>
+              </form>
+              <div class="availability-list" id="availabilityList"></div>
+            </section>
+          </section>
+
+          <section class="shift-tab-panel admin-panel" data-shift-panel="csv" aria-label="CSV連携" hidden>
+            <section class="tool-panel">
+              <div class="panel-heading">
+                <p class="section-label">AI/CSV連携</p>
+                <h2>シフト取込</h2>
+              </div>
+              <div class="flow-list">
+                <button class="ghost-button full-width" id="aiPromptButton" type="button">AI用プロンプトをコピー</button>
+                <button class="ghost-button full-width" id="templateButton" type="button">CSVテンプレート出力</button>
+                <div class="field-group">
+                  <label for="importView">反映先</label>
+                  <select id="importView" name="importView">
+                    <option value="draft">仮シフト</option>
+                    <option value="final">確定シフト</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label for="importMode">取り込み方法</label>
+                  <select id="importMode" name="importMode">
+                    <option value="merge">CSVの行だけ上書き</option>
+                    <option value="replaceMonth">対象月をCSVで作り直す</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label for="csvImportFile">CSVファイル</label>
+                  <input id="csvImportFile" name="csvImportFile" type="file" accept=".csv,text/csv" />
+                </div>
+                <div class="field-group">
+                  <label for="csvPasteText">CSV貼り付け</label>
+                  <textarea id="csvPasteText" name="csvPasteText" rows="5" placeholder="日付,担当枠,主担当,補助担当&#10;2026-06-03,10時,清水 暁,須山 成美"></textarea>
+                </div>
+                <button class="ghost-button full-width" id="previewCsvButton" type="button">CSV内容を確認</button>
+                <div class="csv-preview-list" id="csvPreviewList"></div>
+                <button class="primary-button full-width" id="importCsvButton" type="button" disabled>プレビューを反映</button>
+              </div>
+            </section>
+
+            <section class="tool-panel">
+              <div class="panel-heading">
+                <p class="section-label">シフト編集</p>
+                <h2>担当を登録</h2>
+              </div>
+              <form id="shiftForm" class="shift-form">
+                <div class="field-group">
+                  <label for="shiftDate">日付</label>
+                  <input id="shiftDate" name="shiftDate" type="date" required />
+                </div>
+                <div class="field-group">
+                  <label for="shiftSlot">担当枠</label>
+                  <select id="shiftSlot" name="shiftSlot"></select>
+                </div>
+                <div class="field-group">
+                  <label for="primaryStaff">主担当</label>
+                  <select id="primaryStaff" name="primaryStaff"></select>
+                </div>
+                <div class="field-group">
+                  <label for="supportStaff">補助担当</label>
+                  <select id="supportStaff" name="supportStaff"></select>
+                </div>
+                <button class="primary-button full-width" type="submit">シフトに反映</button>
+              </form>
+            </section>
+          </section>
+
+          <section class="shift-tab-panel admin-panel" data-shift-panel="masters" aria-label="マスタ管理" hidden>
+            <section class="tool-panel">
+              <div class="panel-heading">
+                <p class="section-label">マスタ管理</p>
+                <h2>番組枠</h2>
+              </div>
+              <form id="slotMasterForm" class="master-form"></form>
+              <button class="primary-button full-width" id="saveSlotsButton" type="button">番組枠を保存</button>
+            </section>
+
+            <section class="tool-panel">
+              <div class="panel-heading">
+                <p class="section-label">自動作成条件</p>
+                <h2>シフト自動化マスター</h2>
+              </div>
+              <div class="automation-master-list" id="automationMasterList"></div>
+            </section>
+
+            <section class="tool-panel">
+              <div class="panel-heading">
+                <p class="section-label">スタッフ管理</p>
+                <h2>連絡先・スキル</h2>
+              </div>
+              <form id="staffProfileForm" class="shift-form">
+                <div class="field-group">
+                  <label for="profileStaff">スタッフ</label>
+                  <select id="profileStaff" name="profileStaff"></select>
+                </div>
+                <div class="field-group">
+                  <label for="profileContact">連絡先</label>
+                  <input id="profileContact" name="profileContact" type="text" placeholder="電話、メール、LINE名など" />
+                </div>
+                <div class="field-group">
+                  <label for="profileSkills">スキル・担当可能枠</label>
+                  <textarea id="profileSkills" name="profileSkills" rows="2" placeholder="例: 朝番組、ニュース読み、収録対応"></textarea>
+                </div>
+                <div class="field-group">
+                  <label for="profileUnavailable">NG曜日・注意事項</label>
+                  <textarea id="profileUnavailable" name="profileUnavailable" rows="2" placeholder="例: 火曜午前不可、土曜は隔週のみ"></textarea>
+                </div>
+                <button class="primary-button full-width" type="submit">スタッフ情報を保存</button>
+              </form>
+            </section>
+
+            <section class="tool-panel">
+              <div class="panel-heading">
+                <p class="section-label">月次管理</p>
+                <h2>締切メモ</h2>
+              </div>
+              <form id="workflowSettingsForm" class="shift-form">
+                <div class="field-group">
+                  <label for="draftDeadline">仮シフト共有予定日</label>
+                  <input id="draftDeadline" name="draftDeadline" type="date" />
+                </div>
+                <div class="field-group">
+                  <label for="finalDeadline">確定締切日</label>
+                  <input id="finalDeadline" name="finalDeadline" type="date" />
+                </div>
+                <div class="field-group">
+                  <label for="monthlyNote">月次メモ</label>
+                  <textarea id="monthlyNote" name="monthlyNote" rows="2" placeholder="例: 月末までに希望休を回収、確定後は掲示板で交代申請"></textarea>
+                </div>
+                <button class="primary-button full-width" id="saveWorkflowSettingsButton" type="submit">締切メモを保存</button>
+              </form>
+            </section>
+
+            <section class="tool-panel">
+              <div class="panel-heading">
+                <p class="section-label">通知</p>
+                <h2>変更履歴</h2>
+              </div>
+              <div class="audit-list" id="auditList"></div>
+            </section>
           </section>
         </section>
 
-        <aside class="side-column" aria-label="シフト編集と最新状況">
+        <aside class="side-column" aria-label="個人別シフトと本日の状況">
           <section class="tool-panel collapsible is-collapsed" id="personalShiftPanel" data-collapsible tabindex="-1">
             <div class="panel-heading">
               <div>
@@ -209,220 +440,11 @@
 
           <section class="tool-panel">
             <div class="panel-heading">
-              <p class="section-label">希望提出</p>
-              <h2>休み・出勤可</h2>
-            </div>
-            <form id="availabilityForm" class="shift-form">
-              <div class="field-group admin-field">
-                <label for="availabilityStaff">スタッフ</label>
-                <select id="availabilityStaff" name="availabilityStaff"></select>
-              </div>
-              <div class="field-group">
-                <label for="availabilityDate">日付</label>
-                <input id="availabilityDate" name="availabilityDate" type="date" required />
-              </div>
-              <div class="field-group">
-                <label for="availabilitySlot">担当枠</label>
-                <select id="availabilitySlot" name="availabilitySlot">
-                  <option value="all">終日</option>
-                </select>
-              </div>
-              <div class="field-group">
-                <label for="availabilityType">種別</label>
-                <select id="availabilityType" name="availabilityType">
-                  <option value="off">希望休</option>
-                  <option value="available">出勤可能</option>
-                  <option value="note">勤務メモ</option>
-                </select>
-              </div>
-              <div class="field-group">
-                <label for="availabilityNote">メモ</label>
-                <textarea id="availabilityNote" name="availabilityNote" rows="2" placeholder="例: 午前のみ可能、終日不可など"></textarea>
-              </div>
-              <button class="primary-button full-width" type="submit">希望を登録</button>
-            </form>
-            <div class="availability-list" id="availabilityList"></div>
-          </section>
-
-          <section class="tool-panel">
-            <div class="panel-heading">
               <p class="section-label">本日の最新状況</p>
               <h2 id="todayHeading">--</h2>
             </div>
             <div class="today-list" id="todayList"></div>
             <p class="last-updated" id="lastUpdated">更新履歴なし</p>
-          </section>
-
-          <section class="tool-panel">
-            <div class="panel-heading">
-              <p class="section-label">自動チェック</p>
-              <h2>シフト警告</h2>
-            </div>
-            <div class="issue-list" id="issueList"></div>
-          </section>
-
-          <section class="tool-panel">
-            <div class="panel-heading">
-              <p class="section-label">月間集計</p>
-              <h2>担当回数</h2>
-            </div>
-            <div class="staff-count-list" id="staffCountList"></div>
-          </section>
-
-          <section class="tool-panel admin-panel">
-            <div class="panel-heading">
-              <p class="section-label">承認フロー</p>
-              <h2>承認待ち</h2>
-            </div>
-            <div class="approval-list" id="approvalList"></div>
-          </section>
-
-          <section class="tool-panel admin-panel">
-            <div class="panel-heading">
-              <p class="section-label">シフト編集</p>
-              <h2>担当を登録</h2>
-            </div>
-            <form id="shiftForm" class="shift-form">
-              <div class="field-group">
-                <label for="shiftDate">日付</label>
-                <input id="shiftDate" name="shiftDate" type="date" required />
-              </div>
-              <div class="field-group">
-                <label for="shiftSlot">担当枠</label>
-                <select id="shiftSlot" name="shiftSlot"></select>
-              </div>
-              <div class="field-group">
-                <label for="primaryStaff">主担当</label>
-                <select id="primaryStaff" name="primaryStaff"></select>
-              </div>
-              <div class="field-group">
-                <label for="supportStaff">補助担当</label>
-                <select id="supportStaff" name="supportStaff"></select>
-              </div>
-              <button class="primary-button full-width" type="submit">シフトに反映</button>
-            </form>
-          </section>
-
-          <section class="tool-panel admin-panel">
-            <div class="panel-heading">
-              <p class="section-label">AI/CSV連携</p>
-              <h2>シフト取込</h2>
-            </div>
-            <div class="flow-list">
-              <button class="ghost-button full-width" id="aiPromptButton" type="button">AI用プロンプトをコピー</button>
-              <button class="ghost-button full-width" id="templateButton" type="button">CSVテンプレート出力</button>
-              <div class="field-group">
-                <label for="importView">反映先</label>
-                <select id="importView" name="importView">
-                  <option value="draft">仮シフト</option>
-                  <option value="final">確定シフト</option>
-                </select>
-              </div>
-              <div class="field-group">
-                <label for="importMode">取り込み方法</label>
-                <select id="importMode" name="importMode">
-                  <option value="merge">CSVの行だけ上書き</option>
-                  <option value="replaceMonth">対象月をCSVで作り直す</option>
-                </select>
-              </div>
-              <div class="field-group">
-                <label for="csvImportFile">CSVファイル</label>
-                <input id="csvImportFile" name="csvImportFile" type="file" accept=".csv,text/csv" />
-              </div>
-              <div class="field-group">
-                <label for="csvPasteText">CSV貼り付け</label>
-                <textarea id="csvPasteText" name="csvPasteText" rows="5" placeholder="日付,担当枠,主担当,補助担当&#10;2026-06-03,10時,清水 暁,須山 成美"></textarea>
-              </div>
-              <button class="ghost-button full-width" id="previewCsvButton" type="button">CSV内容を確認</button>
-              <div class="csv-preview-list" id="csvPreviewList"></div>
-              <button class="primary-button full-width" id="importCsvButton" type="button" disabled>プレビューを反映</button>
-            </div>
-          </section>
-
-          <section class="tool-panel admin-panel">
-            <div class="panel-heading">
-              <p class="section-label">マスタ管理</p>
-              <h2>番組枠</h2>
-            </div>
-            <form id="slotMasterForm" class="master-form"></form>
-            <button class="primary-button full-width" id="saveSlotsButton" type="button">番組枠を保存</button>
-          </section>
-
-          <section class="tool-panel admin-panel">
-            <div class="panel-heading">
-              <p class="section-label">自動作成条件</p>
-              <h2>シフト自動化マスター</h2>
-            </div>
-            <div class="automation-master-list" id="automationMasterList"></div>
-          </section>
-
-          <section class="tool-panel admin-panel">
-            <div class="panel-heading">
-              <p class="section-label">スタッフ管理</p>
-              <h2>連絡先・スキル</h2>
-            </div>
-            <form id="staffProfileForm" class="shift-form">
-              <div class="field-group">
-                <label for="profileStaff">スタッフ</label>
-                <select id="profileStaff" name="profileStaff"></select>
-              </div>
-              <div class="field-group">
-                <label for="profileContact">連絡先</label>
-                <input id="profileContact" name="profileContact" type="text" placeholder="電話、メール、LINE名など" />
-              </div>
-              <div class="field-group">
-                <label for="profileSkills">スキル・担当可能枠</label>
-                <textarea id="profileSkills" name="profileSkills" rows="2" placeholder="例: 朝番組、ニュース読み、収録対応"></textarea>
-              </div>
-              <div class="field-group">
-                <label for="profileUnavailable">NG曜日・注意事項</label>
-                <textarea id="profileUnavailable" name="profileUnavailable" rows="2" placeholder="例: 火曜午前不可、土曜は隔週のみ"></textarea>
-              </div>
-              <button class="primary-button full-width" type="submit">スタッフ情報を保存</button>
-            </form>
-          </section>
-
-          <section class="tool-panel admin-panel">
-            <div class="panel-heading">
-              <p class="section-label">作成支援</p>
-              <h2>月次フロー</h2>
-            </div>
-            <div class="flow-list">
-              <button class="ghost-button full-width" id="autoDraftButton" type="button">今月の仮シフトを自動作成</button>
-              <button class="ghost-button full-width" id="exportButton" type="button">シフトをCSV出力</button>
-              <button class="ghost-button full-width" id="backupButton" type="button">バックアップJSON出力</button>
-              <button class="ghost-button full-width" id="resetButton" type="button">デモデータに戻す</button>
-            </div>
-          </section>
-
-          <section class="tool-panel admin-panel">
-            <div class="panel-heading">
-              <p class="section-label">月次管理</p>
-              <h2>締切メモ</h2>
-            </div>
-            <form id="workflowSettingsForm" class="shift-form">
-              <div class="field-group">
-                <label for="draftDeadline">仮シフト共有予定日</label>
-                <input id="draftDeadline" name="draftDeadline" type="date" />
-              </div>
-              <div class="field-group">
-                <label for="finalDeadline">確定締切日</label>
-                <input id="finalDeadline" name="finalDeadline" type="date" />
-              </div>
-              <div class="field-group">
-                <label for="monthlyNote">月次メモ</label>
-                <textarea id="monthlyNote" name="monthlyNote" rows="2" placeholder="例: 月末までに希望休を回収、確定後は掲示板で交代申請"></textarea>
-              </div>
-              <button class="primary-button full-width" id="saveWorkflowSettingsButton" type="submit">締切メモを保存</button>
-            </form>
-          </section>
-
-          <section class="tool-panel">
-            <div class="panel-heading">
-              <p class="section-label">通知</p>
-              <h2>変更履歴</h2>
-            </div>
-            <div class="audit-list" id="auditList"></div>
           </section>
         </aside>
       </main>
@@ -674,6 +696,7 @@
             </div>
             <div class="inline-controls">
               <input class="archive-search" id="documentSearch" type="search" placeholder="送付先・件名・ファイル名で検索" />
+              <button class="ghost-button compact-action" id="saveDocumentsToDriveButton" type="button">Googleドライブへ保存</button>
               <button class="ghost-button compact-action" id="exportDocumentsCsvButton" type="button">CSV出力</button>
             </div>
           </div>

@@ -2312,6 +2312,234 @@ textarea {
   }
 }
 
+/* Shift workspace UX refinements */
+.shift-command-center {
+  position: sticky;
+  top: 96px;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+  gap: 12px;
+  padding: 12px;
+  background: rgba(243, 246, 251, 0.86);
+  border: 1px solid rgba(60, 64, 67, 0.08);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(16px);
+}
+
+.shift-command-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 20px;
+}
+
+.shift-command-card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.quick-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quick-action-grid .ghost-button,
+.quick-action-grid .primary-button,
+.quick-action-grid .danger-button {
+  min-height: 42px;
+  justify-content: center;
+  padding-inline: 12px;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.compact-list {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.shift-subnav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  background: rgba(237, 242, 250, 0.92);
+  border-radius: var(--pill);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(14px);
+}
+
+.shift-subtab {
+  min-height: 42px;
+  padding: 0 14px;
+  color: #3c4043;
+  background: transparent;
+  border-radius: var(--pill);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.shift-subtab.active {
+  color: #0842a0;
+  background: #d3e3fd;
+}
+
+body.is-staff .shift-subnav {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shift-tab-panel {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.shift-tab-panel[hidden] {
+  display: none;
+}
+
+.shift-insight-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 14px;
+}
+
+.status-item {
+  overflow: hidden;
+}
+
+.status-item strong {
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.status-item small {
+  display: block;
+  margin-top: 7px;
+  color: #5f6368;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+.day-card.has-hourly-slots .shift-row {
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+
+.slot-code,
+.slot-code.hour-slot {
+  width: 38px;
+  min-width: 38px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: var(--pill);
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.slot-count-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.slot-count-chip {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  gap: 5px;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 8px;
+  color: #0842a0;
+  background: #d3e3fd;
+  border-radius: var(--pill);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.slot-count-chip b,
+.slot-count-chip em {
+  font: inherit;
+}
+
+.slot-count-chip em {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  color: #ffffff;
+  background: #0b57d0;
+  border-radius: 50%;
+}
+
+.slot-count-chip.is-zero {
+  color: #5f6368;
+  background: #ffffff;
+}
+
+.slot-count-chip.is-zero em {
+  color: #5f6368;
+  background: #edf2fa;
+}
+
+.staff-count-item > span {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .shift-command-center,
+  .shift-insight-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shift-command-center,
+  .shift-subnav {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .shift-command-center {
+    padding: 10px;
+  }
+
+  .quick-action-grid,
+  .shift-subnav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-action-grid .ghost-button,
+  .quick-action-grid .primary-button,
+  .quick-action-grid .danger-button {
+    min-height: 46px;
+    padding-inline: 10px;
+    font-size: 0.8rem;
+  }
+
+  .shift-subtab {
+    min-height: 40px;
+    font-size: 0.8rem;
+  }
+
+  .compact-list {
+    max-height: none;
+  }
+
+  .day-card.has-hourly-slots .shift-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+}
+
 @media print {
   body {
     background: #ffffff;

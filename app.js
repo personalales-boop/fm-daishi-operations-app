@@ -84,6 +84,7 @@ let pendingMusicCsvImport = null;
 let deferredInstallPrompt = null;
 let boardFilter = "all";
 let activeModule = "shift";
+let activeShiftTab = "overview";
 let selectedMusicDate = formatISO(new Date());
 let musicSearchText = "";
 let contentSearchText = "";
@@ -152,6 +153,8 @@ const els = {
   loginPin: document.getElementById("loginPin"),
   moduleTabs: document.querySelectorAll("[data-module]"),
   modulePanels: document.querySelectorAll("[data-module-panel]"),
+  shiftTabs: document.querySelectorAll("[data-shift-tab]"),
+  shiftPanels: document.querySelectorAll("[data-shift-panel]"),
   userBadge: document.getElementById("userBadge"),
   logoutButton: document.getElementById("logoutButton"),
   notifyButton: document.getElementById("notifyButton"),
@@ -288,6 +291,7 @@ const els = {
   documentStatus: document.getElementById("documentStatus"),
   documentFileRef: document.getElementById("documentFileRef"),
   documentMemo: document.getElementById("documentMemo"),
+  saveDocumentsToDriveButton: document.getElementById("saveDocumentsToDriveButton"),
   exportDocumentsCsvButton: document.getElementById("exportDocumentsCsvButton"),
   toastRegion: document.getElementById("toastRegion"),
 };
@@ -324,6 +328,7 @@ async function boot() {
 function bindEvents() {
   els.loginForm.addEventListener("submit", handleLogin);
   els.moduleTabs.forEach((button) => button.addEventListener("click", () => setActiveModule(button.dataset.module || "shift")));
+  els.shiftTabs.forEach((button) => button.addEventListener("click", () => setActiveShiftTab(button.dataset.shiftTab || "overview")));
   els.logoutButton.addEventListener("click", () => logout(true));
   els.notifyButton.addEventListener("click", toggleNotifications);
   els.installButton.addEventListener("click", handleInstallClick);
@@ -406,6 +411,7 @@ function bindEvents() {
   });
   els.documentForm.addEventListener("submit", saveBusinessDocument);
   els.documentList.addEventListener("click", handleDocumentListClick);
+  els.saveDocumentsToDriveButton.addEventListener("click", saveDocumentsToDrive);
   els.exportDocumentsCsvButton.addEventListener("click", exportDocumentsCsv);
 }
 
@@ -598,30 +604,34 @@ function renderStatus() {
   }).length;
   const finalStatus = workflow.finalizedAt ? formatDateTime(workflow.finalizedAt) : "未確定";
   const sharedStatus = workflow.draftSharedAt ? formatDateTime(workflow.draftSharedAt) : workflow.draftDeadline ? `予定 ${formatDateShort(workflow.draftDeadline)}` : "未共有";
-  const finalDisplay = workflow.finalizedAt ? finalStatus : workflow.finalDeadline ? `締切 ${formatDateShort(workflow.finalDeadline)}` : finalStatus;
+  const sharedLabel = workflow.draftSharedAt ? "共有済み" : workflow.draftDeadline ? "共有予定" : "未共有";
+  const finalLabel = workflow.finalizedAt ? "確定済み" : workflow.finalDeadline ? "締切あり" : "未確定";
+  const sharedMeta = workflow.draftSharedAt ? formatDateTime(workflow.draftSharedAt) : workflow.draftDeadline ? `予定 ${formatDateShort(workflow.draftDeadline)}` : "";
+  const finalMeta = workflow.finalizedAt ? formatDateTime(workflow.finalizedAt) : workflow.finalDeadline ? `締切 ${formatDateShort(workflow.finalDeadline)}` : "";
   const viewLabel = state.activeView === "draft" ? "仮シフト" : "確定シフト";
 
   const cards = isAdmin()
     ? [
-        statusCard("表示中", `${viewLabel} / 要対応 ${openCount}件`, "warning"),
-        statusCard("承認待ち", `${pendingCount}件`, "warning"),
-        statusCard("仮シフト共有", sharedStatus, ""),
-        statusCard("確定シフト", finalDisplay, "final"),
+        statusCard("表示中", viewLabel, "warning", `要対応 ${openCount}件`),
+        statusCard("承認待ち", `${pendingCount}件`, "warning", "交換申請"),
+        statusCard("仮シフト共有", sharedLabel, "", sharedMeta),
+        statusCard("確定シフト", finalLabel, "final", finalMeta),
       ]
     : [
         statusCard("表示中", viewLabel, "warning"),
-        statusCard("シフト状態", workflow.finalizedAt ? `確定済み ${finalStatus}` : `仮シフト ${sharedStatus}`, ""),
+        statusCard("シフト状態", workflow.finalizedAt ? "確定済み" : "仮シフト", "", workflow.finalizedAt ? finalStatus : sharedStatus),
         statusCard("連絡事項", `${openCount}件`, "final"),
       ];
 
   els.statusStrip.innerHTML = cards.join("");
 }
 
-function statusCard(label, value, tone) {
+function statusCard(label, value, tone = "", meta = "") {
   return `
     <div class="status-item ${tone}">
       <span>${escapeHtml(label)}</span>
       <strong>${escapeHtml(value)}</strong>
+      ${meta ? `<small>${escapeHtml(meta)}</small>` : ""}
     </div>
   `;
 }
@@ -902,11 +912,21 @@ function renderStaffCounts() {
   els.staffCountList.innerHTML = counts
     .map((item) => {
       const staff = getStaff(item.staffId);
-      const slotText = shiftSlots.map((slot) => `${slot.short}${item.slots[slot.id] || 0}`).join(" / ");
+      const slotHtml = shiftSlots
+        .map((slot) => {
+          const count = item.slots[slot.id] || 0;
+          return `
+          <span class="slot-count-chip ${count ? "" : "is-zero"}">
+            <b>${escapeHtml(slot.short)}</b>
+            <em>${count}</em>
+          </span>
+        `;
+        })
+        .join("");
       return `
         <article class="staff-count-item ${item.staffId === currentUser?.staffId ? "is-own" : ""}">
           <strong>${escapeHtml(staff?.name || item.staffId)} <em>${item.total}回</em></strong>
-          <span>${escapeHtml(slotText)}</span>
+          <div class="slot-count-grid">${slotHtml}</div>
         </article>
       `;
     })
@@ -1458,6 +1478,10 @@ function applyPermissions() {
   document.body.classList.toggle("is-staff", !admin);
   document.body.classList.toggle("is-viewer", viewer);
   document.body.classList.toggle("is-admin", admin);
+  if (!admin && ["csv", "masters"].includes(activeShiftTab)) {
+    activeShiftTab = "overview";
+  }
+  applyShiftTabVisibility();
   els.fromStaff.disabled = !admin;
 
   [els.shareDraftButton, els.finalizeButton, els.autoDraftButton, els.resetButton, els.aiPromptButton, els.templateButton, els.previewCsvButton].forEach((button) => {
@@ -1540,6 +1564,7 @@ function startQuickShiftRequest(chip) {
   if (!date || !slot || !currentUser?.staffId) return;
 
   setSelectedDate(date, true);
+  setActiveShiftTab("requests");
   els.postType.value = "absence";
   els.postDate.value = date;
   els.postSlot.value = slotId;
@@ -2400,8 +2425,7 @@ function exportContentCsv() {
   toast("放送資料CSVを書き出しました");
 }
 
-function exportDocumentsCsv() {
-  if (!isAdmin()) return;
+function createDocumentCsvRows() {
   const rows = [["種別", "発行日", "期限日", "送付先", "宛名", "件名", "金額", "ステータス", "ファイル", "メモ", "送付日時", "入金日時"]];
   (state.businessDocuments || []).forEach((item) => {
     rows.push([
@@ -2419,8 +2443,29 @@ function exportDocumentsCsv() {
       item.paidAt || "",
     ]);
   });
+  return rows;
+}
+
+function exportDocumentsCsv() {
+  if (!isAdmin()) return;
+  const rows = createDocumentCsvRows();
   downloadCsv(rows, `fm-daishi-documents-${state.currentMonth}.csv`);
   toast("書類送付CSVを書き出しました");
+}
+
+function saveDocumentsToDrive() {
+  if (!isAdmin()) return;
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    app: "FM大師 業務管理",
+    target: "google-drive",
+    kind: "businessDocuments",
+    month: state.currentMonth,
+    documents: state.businessDocuments || [],
+  };
+  downloadCsv(createDocumentCsvRows(), `fm-daishi-google-drive-documents-${state.currentMonth}.csv`);
+  downloadJson(payload, `fm-daishi-google-drive-documents-${state.currentMonth}.json`);
+  toast("Googleドライブ保存用のCSVとJSONを書き出しました");
 }
 
 async function importCsvSchedule() {
@@ -2774,6 +2819,16 @@ function downloadCsv(rows, filename) {
   URL.revokeObjectURL(url);
 }
 
+function downloadJson(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 async function moveMonth(offset) {
   const { year, monthIndex } = parseMonth(state.currentMonth);
   const next = new Date(year, monthIndex + offset, 1);
@@ -2800,6 +2855,34 @@ function setActiveView(view) {
 function setActiveModule(module) {
   activeModule = ["shift", "music", "content", "documents"].includes(module) ? module : "shift";
   applyModuleVisibility();
+}
+
+function setActiveShiftTab(tab) {
+  const adminTabs = ["csv", "masters"];
+  const allowedTabs = isAdmin() ? ["overview", "requests", ...adminTabs] : ["overview", "requests"];
+  activeShiftTab = allowedTabs.includes(tab) ? tab : "overview";
+  applyShiftTabVisibility();
+}
+
+function applyShiftTabVisibility() {
+  const admin = isAdmin();
+  if (!admin && ["csv", "masters"].includes(activeShiftTab)) {
+    activeShiftTab = "overview";
+  }
+
+  els.shiftTabs.forEach((button) => {
+    const isActive = button.dataset.shiftTab === activeShiftTab;
+    if (button.classList.contains("shift-subtab")) {
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-current", isActive ? "page" : "false");
+    }
+  });
+  els.shiftPanels.forEach((panel) => {
+    const isAdminPanel = panel.classList.contains("admin-panel");
+    const isVisible = panel.dataset.shiftPanel === activeShiftTab && (admin || !isAdminPanel);
+    panel.hidden = !isVisible;
+    panel.classList.toggle("active", isVisible);
+  });
 }
 
 function applyModuleVisibility() {
