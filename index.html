@@ -301,6 +301,7 @@
               <div class="flow-list">
                 <button class="ghost-button full-width" id="aiPromptButton" type="button">AI用プロンプトをコピー</button>
                 <button class="ghost-button full-width" id="templateButton" type="button">CSVテンプレート出力</button>
+                <button class="ghost-button full-width" id="standardTemplateButton" type="button">標準形式CSV出力</button>
                 <div class="field-group">
                   <label for="importView">反映先</label>
                   <select id="importView" name="importView">
@@ -321,7 +322,7 @@
                 </div>
                 <div class="field-group">
                   <label for="csvPasteText">CSV貼り付け</label>
-                  <textarea id="csvPasteText" name="csvPasteText" rows="5" placeholder="日付,担当枠,主担当,補助担当&#10;2026-06-03,10時,清水 暁,須山 成美"></textarea>
+                  <textarea id="csvPasteText" name="csvPasteText" rows="5" placeholder="日付,担当枠,主担当,補助担当&#10;2026-06-03,10時,清水 暁,須山 成美&#10;&#10;または標準形式: 日付,曜日,名前,09:00~,10:00~..."></textarea>
                 </div>
                 <button class="ghost-button full-width" id="previewCsvButton" type="button">CSV内容を確認</button>
                 <div class="csv-preview-list" id="csvPreviewList"></div>

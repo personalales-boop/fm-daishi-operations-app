@@ -194,6 +194,7 @@ const els = {
   resetButton: document.getElementById("resetButton"),
   aiPromptButton: document.getElementById("aiPromptButton"),
   templateButton: document.getElementById("templateButton"),
+  standardTemplateButton: document.getElementById("standardTemplateButton"),
   importView: document.getElementById("importView"),
   importMode: document.getElementById("importMode"),
   csvImportFile: document.getElementById("csvImportFile"),
@@ -351,6 +352,7 @@ function bindEvents() {
   els.copyMyShiftButton.addEventListener("click", copyVisiblePersonalShiftText);
   els.aiPromptButton.addEventListener("click", copyAiPrompt);
   els.templateButton.addEventListener("click", exportAiTemplate);
+  els.standardTemplateButton.addEventListener("click", exportStandardShiftCsv);
   els.previewCsvButton.addEventListener("click", previewCsvSchedule);
   els.importCsvButton.addEventListener("click", importCsvSchedule);
   els.csvImportFile.addEventListener("change", resetCsvPreview);
@@ -1484,7 +1486,7 @@ function applyPermissions() {
   applyShiftTabVisibility();
   els.fromStaff.disabled = !admin;
 
-  [els.shareDraftButton, els.finalizeButton, els.autoDraftButton, els.resetButton, els.aiPromptButton, els.templateButton, els.previewCsvButton].forEach((button) => {
+  [els.shareDraftButton, els.finalizeButton, els.autoDraftButton, els.resetButton, els.aiPromptButton, els.templateButton, els.standardTemplateButton, els.previewCsvButton].forEach((button) => {
     button.disabled = !admin;
     button.title = admin ? "" : "管理者のみ操作できます";
   });
@@ -2243,6 +2245,49 @@ function exportAiTemplate() {
   toast("AI用CSVテンプレートを書き出しました");
 }
 
+function exportStandardShiftCsv() {
+  if (!isAdmin()) return;
+  const schedule = getVisibleSchedule(state.activeView, state.currentMonth);
+  const rows = createStandardShiftRows(schedule);
+  downloadCsv(rows, `fm-daishi-standard-${state.currentMonth}-${state.activeView}.csv`);
+  toast("標準形式CSVを書き出しました");
+}
+
+function createStandardShiftRows(schedule) {
+  const hourlySlots = shiftSlots
+    .filter((slot) => Number.isFinite(getSlotHour(slot)))
+    .sort((a, b) => getSlotHour(a) - getSlotHour(b));
+  const rows = [["日付", "曜日", "名前", ...hourlySlots.map((slot) => `${pad(getSlotHour(slot))}:00~`), "オリジナル番組"]];
+
+  Object.keys(schedule)
+    .sort()
+    .forEach((date) => {
+      const programText = hourlySlots
+        .map((slot) => {
+          const program = getOriginalProgramForDateSlot(date, slot);
+          return program ? `${slot.short} ${program.title}` : "";
+        })
+        .filter(Boolean)
+        .join(" / ");
+      rows.push([
+        date,
+        weekdayLabels[parseISO(date).getDay()],
+        "",
+        ...hourlySlots.map((slot) => formatStaffNamesForCsv(schedule[date]?.[slot.id] || [])),
+        programText,
+      ]);
+    });
+
+  return rows;
+}
+
+function formatStaffNamesForCsv(staffIds) {
+  return staffIds
+    .map((id) => getStaff(id)?.name)
+    .filter(Boolean)
+    .join(" / ");
+}
+
 async function copyAiPrompt() {
   if (!isAdmin()) return;
   const staffNames = staffMembers.map((staff) => staff.name).join("、");
@@ -2580,7 +2625,11 @@ function renderCsvPreview(preview) {
 function parseScheduleCsv(text) {
   const rows = parseCsv(text);
   if (rows.length < 2) throw new Error("CSVにデータ行がありません");
-  const headers = rows[0].map((header) => normalizeHeader(header));
+  const rawHeaders = rows[0];
+  const headers = rawHeaders.map((header) => normalizeHeader(header));
+  const standardRows = parseStandardScheduleCsvRows(rows.slice(1), rawHeaders, headers);
+  if (standardRows) return standardRows;
+
   const index = {
     date: findHeader(headers, ["date", "日付", "年月日"]),
     slot: findHeader(headers, ["slot", "担当枠", "枠"]),
@@ -2589,7 +2638,7 @@ function parseScheduleCsv(text) {
   };
 
   if (index.date < 0 || index.slot < 0 || index.primary < 0) {
-    throw new Error("CSVには「日付,担当枠,主担当,補助担当」の列が必要です");
+    throw new Error("CSVには「日付,担当枠,主担当,補助担当」または「日付,曜日,名前,09:00~,10:00~...」の列が必要です");
   }
 
   return rows
@@ -2601,6 +2650,60 @@ function parseScheduleCsv(text) {
       primary: row[index.primary] || "",
       support: index.support >= 0 ? row[index.support] || "" : "",
     }));
+}
+
+function parseStandardScheduleCsvRows(dataRows, rawHeaders, headers) {
+  const dateIndex = findHeader(headers, ["date", "日付", "年月日"]);
+  const nameIndex = findHeader(headers, ["name", "名前", "氏名", "スタッフ"]);
+  const hourColumns = rawHeaders
+    .map((header, index) => {
+      const slotId = normalizeCsvSlot(header);
+      const headerText = String(header || "").trim();
+      const looksLikeHour = /\d{1,2}\s*(?::\s*00)?\s*(?:~|時|枠)?/.test(headerText);
+      return slotId && looksLikeHour ? { index, slotId } : null;
+    })
+    .filter(Boolean);
+
+  if (dateIndex < 0 || hourColumns.length < 2) return null;
+
+  const parsedRows = [];
+  dataRows
+    .filter((row) => row.some((cell) => String(cell || "").trim()))
+    .forEach((row) => {
+      const date = row[dateIndex] || "";
+      const rowStaff = nameIndex >= 0 ? row[nameIndex] || "" : "";
+      hourColumns.forEach((column) => {
+        const cell = row[column.index] || "";
+        const staffValues = extractStandardCellStaffValues(cell, rowStaff);
+        if (!staffValues.length) return;
+        parsedRows.push({
+          date,
+          slot: getSlot(column.slotId)?.label || column.slotId,
+          primary: staffValues[0] || "",
+          support: staffValues[1] || "",
+        });
+      });
+    });
+
+  return parsedRows;
+}
+
+function extractStandardCellStaffValues(cell, rowStaff) {
+  const text = String(cell || "").trim();
+  const staffText = String(rowStaff || "").trim();
+  if (!text) return [];
+
+  if (staffText && /^(○|◯|〇|●|◎|1|true|yes|y|ok|担当|入|出|可)$/i.test(text)) {
+    return [staffText];
+  }
+
+  const parts = text
+    .split(/[、,，/／\n\r]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const staffParts = parts.filter((part) => normalizeCsvStaff(part));
+  if (staffParts.length) return staffParts.slice(0, 2);
+  return staffText ? [staffText] : [];
 }
 
 function parseMusicCsv(text) {
