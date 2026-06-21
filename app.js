@@ -3,17 +3,17 @@ const NOTIFY_KEY = "fm-daishi-notifications-v1";
 const STATIC_STORE_KEY = "fm-daishi-static-store-v2";
 
 const staticStaffMembers = [
-  { id: "shimizu", code: "SH", name: "清水 暁", role: "パーソナリティ", abilities: ["P", "A"], color: "#087f8c" },
-  { id: "suyama", code: "SY", name: "須山 成美", role: "パーソナリティ", abilities: ["P1", "P", "M", "A", "MA"], color: "#c94e3b" },
-  { id: "sakamoto_tadashi", code: "SK", name: "坂本 匡", role: "パーソナリティ", abilities: ["P1", "P", "M", "MA"], color: "#a87400" },
-  { id: "sakamoto_yumiko", code: "YS", name: "坂本 由美子", role: "パーソナリティ", abilities: ["P", "A"], color: "#2f8f5b" },
-  { id: "aoki", code: "AO", name: "青木 朋美", role: "パーソナリティ", abilities: ["P", "A"], color: "#576b95" },
-  { id: "madokawa", code: "MD", name: "窓川 唯良", role: "パーソナリティ", abilities: ["P", "A"], color: "#9a5b33" },
-  { id: "sato_takashi", code: "ST", name: "佐藤 隆", role: "パーソナリティ", abilities: ["P1", "P", "M", "MA"], color: "#7d5f9f" },
-  { id: "kaminaga", code: "KG", name: "神永 直樹", role: "パーソナリティ", abilities: ["P", "M", "A"], color: "#3f7d5a" },
-  { id: "tazawa", code: "TZ", name: "田沢 一郎", role: "パーソナリティ", abilities: ["P", "A"], color: "#b54b6a" },
-  { id: "uruchida", code: "UR", name: "粳田 浩介", role: "パーソナリティ", abilities: ["P", "A"], color: "#4f6f52" },
-  { id: "is", code: "IS", name: "IS（氏名未設定）", role: "パーソナリティ", abilities: ["P", "A"], color: "#3d6f8e" },
+  { id: "shimizu", code: "SH", name: "清水 暁", role: "パーソナリティ", abilities: ["P", "A"], color: "#1a73e8" },
+  { id: "suyama", code: "SY", name: "須山 成美", role: "パーソナリティ", abilities: ["P1", "P", "M", "A", "MA"], color: "#ea4335" },
+  { id: "sakamoto_tadashi", code: "SK", name: "坂本 匡", role: "パーソナリティ", abilities: ["P1", "P", "M", "MA"], color: "#fbbc04" },
+  { id: "sakamoto_yumiko", code: "YS", name: "坂本 由美子", role: "パーソナリティ", abilities: ["P", "A"], color: "#34a853" },
+  { id: "aoki", code: "AO", name: "青木 朋美", role: "パーソナリティ", abilities: ["P", "A"], color: "#4285f4" },
+  { id: "madokawa", code: "MD", name: "窓川 唯良", role: "パーソナリティ", abilities: ["P", "A"], color: "#9c27b0" },
+  { id: "sato_takashi", code: "ST", name: "佐藤 隆", role: "パーソナリティ", abilities: ["P1", "P", "M", "MA"], color: "#00acc1" },
+  { id: "kaminaga", code: "KG", name: "神永 直樹", role: "パーソナリティ", abilities: ["P", "M", "A"], color: "#0f9d58" },
+  { id: "tazawa", code: "TZ", name: "田沢 一郎", role: "パーソナリティ", abilities: ["P", "A"], color: "#ff7043" },
+  { id: "uruchida", code: "UR", name: "粳田 浩介", role: "パーソナリティ", abilities: ["P", "A"], color: "#7cb342" },
+  { id: "is", code: "IS", name: "IS（氏名未設定）", role: "パーソナリティ", abilities: ["P", "A"], color: "#5f6368" },
 ];
 
 const staticShiftSlots = Array.from({ length: 9 }, (_, index) => {
@@ -58,7 +58,7 @@ const staticLoginUsers = staticStaffMembers.map((staff) => ({
     role: "閲覧専用",
     permission: "viewer",
     pin: "2222",
-    color: "#576b95",
+    color: "#5f6368",
   },
 ]);
 

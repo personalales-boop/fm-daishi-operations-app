@@ -14,17 +14,17 @@ const scheduleMasters = loadScheduleMasters();
 const defaultShiftSlots = createDefaultShiftSlots();
 
 const staffMembers = [
-  createStaff("shimizu", "SH", "清水 暁", "#087f8c"),
-  createStaff("suyama", "SY", "須山 成美", "#c94e3b"),
-  createStaff("sakamoto_tadashi", "SK", "坂本 匡", "#a87400"),
-  createStaff("sakamoto_yumiko", "YS", "坂本 由美子", "#2f8f5b"),
-  createStaff("aoki", "AO", "青木 朋美", "#576b95"),
-  createStaff("madokawa", "MD", "窓川 唯良", "#9a5b33"),
-  createStaff("sato_takashi", "ST", "佐藤 隆", "#7d5f9f"),
-  createStaff("kaminaga", "KG", "神永 直樹", "#3f7d5a"),
-  createStaff("tazawa", "TZ", "田沢 一郎", "#b54b6a"),
-  createStaff("uruchida", "UR", "粳田 浩介", "#4f6f52"),
-  createStaff("is", "IS", "IS（氏名未設定）", "#3d6f8e"),
+  createStaff("shimizu", "SH", "清水 暁", "#1a73e8"),
+  createStaff("suyama", "SY", "須山 成美", "#ea4335"),
+  createStaff("sakamoto_tadashi", "SK", "坂本 匡", "#fbbc04"),
+  createStaff("sakamoto_yumiko", "YS", "坂本 由美子", "#34a853"),
+  createStaff("aoki", "AO", "青木 朋美", "#4285f4"),
+  createStaff("madokawa", "MD", "窓川 唯良", "#9c27b0"),
+  createStaff("sato_takashi", "ST", "佐藤 隆", "#00acc1"),
+  createStaff("kaminaga", "KG", "神永 直樹", "#0f9d58"),
+  createStaff("tazawa", "TZ", "田沢 一郎", "#ff7043"),
+  createStaff("uruchida", "UR", "粳田 浩介", "#7cb342"),
+  createStaff("is", "IS", "IS（氏名未設定）", "#5f6368"),
 ];
 
 const adminStaffIds = new Set(["shimizu", "suyama"]);
@@ -58,7 +58,7 @@ const loginUsers = staffMembers.map((staff) => ({
     role: "閲覧専用",
     permission: "viewer",
     pin: "2222",
-    color: "#576b95",
+    color: "#5f6368",
   },
 ]);
 
