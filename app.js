@@ -411,7 +411,7 @@ function bindEvents() {
   });
   els.documentForm.addEventListener("submit", saveBusinessDocument);
   els.documentList.addEventListener("click", handleDocumentListClick);
-  els.saveDocumentsToDriveButton.addEventListener("click", saveDocumentsToDrive);
+  els.saveDocumentsToDriveButton?.addEventListener("click", saveDocumentsToDrive);
   els.exportDocumentsCsvButton.addEventListener("click", exportDocumentsCsv);
 }
 
