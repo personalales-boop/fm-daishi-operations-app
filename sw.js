@@ -1,4 +1,4 @@
-const CACHE_NAME = "fm-daishi-operations-v17";
+const CACHE_NAME = "fm-daishi-operations-v18";
 const APP_SHELL = [
   "./",
   "./index.html",

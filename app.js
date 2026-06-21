@@ -89,6 +89,7 @@ let selectedMusicDate = formatISO(new Date());
 let musicSearchText = "";
 let contentSearchText = "";
 let documentSearchText = "";
+let affiliateSearchText = "";
 
 const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
 const postTypeLabels = {
@@ -140,6 +141,7 @@ const state = {
   musicLibrary: [],
   musicSchedule: {},
   businessDocuments: [],
+  affiliatePartners: [],
   shiftSlots: [],
   auditLog: [],
   updatedAt: new Date().toISOString(),
@@ -294,6 +296,18 @@ const els = {
   documentMemo: document.getElementById("documentMemo"),
   saveDocumentsToDriveButton: document.getElementById("saveDocumentsToDriveButton"),
   exportDocumentsCsvButton: document.getElementById("exportDocumentsCsvButton"),
+  affiliateKpiStrip: document.getElementById("affiliateKpiStrip"),
+  affiliateSearch: document.getElementById("affiliateSearch"),
+  affiliateList: document.getElementById("affiliateList"),
+  affiliateForm: document.getElementById("affiliateForm"),
+  affiliateCompanyNo: document.getElementById("affiliateCompanyNo"),
+  affiliateName: document.getElementById("affiliateName"),
+  affiliateJoinedDate: document.getElementById("affiliateJoinedDate"),
+  affiliateContractEndDate: document.getElementById("affiliateContractEndDate"),
+  affiliateRenewalTiming: document.getElementById("affiliateRenewalTiming"),
+  affiliateWebsiteUrl: document.getElementById("affiliateWebsiteUrl"),
+  affiliateHandoverMemo: document.getElementById("affiliateHandoverMemo"),
+  exportAffiliatesCsvButton: document.getElementById("exportAffiliatesCsvButton"),
   toastRegion: document.getElementById("toastRegion"),
 };
 
@@ -415,6 +429,12 @@ function bindEvents() {
   els.documentList.addEventListener("click", handleDocumentListClick);
   els.saveDocumentsToDriveButton?.addEventListener("click", saveDocumentsToDrive);
   els.exportDocumentsCsvButton.addEventListener("click", exportDocumentsCsv);
+  els.affiliateSearch.addEventListener("input", () => {
+    affiliateSearchText = els.affiliateSearch.value.trim();
+    renderAffiliateList();
+  });
+  els.affiliateForm.addEventListener("submit", saveAffiliatePartner);
+  els.exportAffiliatesCsvButton.addEventListener("click", exportAffiliatesCsv);
 }
 
 async function loadConfig() {
@@ -583,6 +603,7 @@ function render() {
   renderMusicDashboard();
   renderContentDashboard();
   renderDocumentDashboard();
+  renderAffiliateDashboard();
   syncForms();
   applyPermissions();
   applyModuleVisibility();
@@ -1437,6 +1458,90 @@ function renderDocumentList() {
     .join("");
 }
 
+function renderAffiliateDashboard() {
+  if (!els.affiliateList) return;
+  renderAffiliateKpis();
+  renderAffiliateList();
+}
+
+function renderAffiliateKpis() {
+  const items = state.affiliatePartners || [];
+  const now = new Date();
+  const renewalSoon = items.filter((item) => {
+    const endDate = parseDateOrNull(item.contractEndDate);
+    if (!endDate) return false;
+    const diffDays = Math.ceil((endDate - now) / 86400000);
+    return diffDays >= 0 && diffDays <= 90;
+  }).length;
+  const expired = items.filter((item) => {
+    const endDate = parseDateOrNull(item.contractEndDate);
+    return endDate && endDate < now;
+  }).length;
+  const withWebsite = items.filter((item) => isSafeHttpUrl(item.websiteUrl)).length;
+
+  els.affiliateKpiStrip.innerHTML = [
+    statusCard("加盟店", `${items.length}社`, ""),
+    statusCard("90日以内更新", `${renewalSoon}社`, renewalSoon ? "warning" : ""),
+    statusCard("満了済み", `${expired}社`, expired ? "warning" : "final"),
+    statusCard("URL登録", `${withWebsite}社`, "final"),
+  ].join("");
+}
+
+function renderAffiliateList() {
+  const query = normalizeSearchText(affiliateSearchText);
+  const items = getSortedAffiliatePartners().filter((item) => {
+    if (!query) return true;
+    return normalizeSearchText([
+      item.companyNo,
+      item.name,
+      item.joinedDate,
+      item.contractEndDate,
+      item.renewalTiming,
+      item.websiteUrl,
+      item.handoverMemo,
+    ].join(" ")).includes(query);
+  });
+
+  if (!items.length) {
+    els.affiliateList.innerHTML = `<div class="affiliate-item"><strong>加盟店はまだありません</strong><span>右側のフォームから会社番号と引き継ぎ事項を保存できます。</span></div>`;
+    return;
+  }
+
+  els.affiliateList.innerHTML = items
+    .map((item) => {
+      const website = isSafeHttpUrl(item.websiteUrl)
+        ? `<a href="${escapeHtml(item.websiteUrl)}" target="_blank" rel="noopener noreferrer">Webサイト</a>`
+        : `<span>URL未登録</span>`;
+      return `
+        <article class="affiliate-item">
+          <div class="affiliate-main">
+            <div class="content-meta">
+              <span class="company-no">${escapeHtml(item.companyNo || "")}</span>
+              <span>加盟 ${escapeHtml(formatOptionalDate(item.joinedDate))}</span>
+              <span>満了 ${escapeHtml(formatOptionalDate(item.contractEndDate))}</span>
+            </div>
+            <strong>${escapeHtml(item.name || "会社名未設定")}</strong>
+            <span>${escapeHtml(item.renewalTiming || "更新時期未設定")}</span>
+            ${item.handoverMemo ? `<p>${escapeHtml(item.handoverMemo)}</p>` : ""}
+          </div>
+          <div class="affiliate-actions">
+            ${website}
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function getSortedAffiliatePartners() {
+  return [...(state.affiliatePartners || [])].sort(compareAffiliatePartners);
+}
+
+function compareAffiliatePartners(a, b) {
+  return String(a.name || "").localeCompare(String(b.name || ""), "ja", { sensitivity: "base", numeric: true }) ||
+    String(a.companyNo || "").localeCompare(String(b.companyNo || ""), "ja", { numeric: true });
+}
+
 function syncForms() {
   const defaultDate = state.selectedDate || getDefaultSelectedDate(state.currentMonth);
   if (!els.postDate.value || !els.postDate.value.startsWith(state.currentMonth)) {
@@ -1460,6 +1565,13 @@ function syncForms() {
   if (!els.documentIssueDate.value || !els.documentIssueDate.value.startsWith(state.currentMonth)) {
     els.documentIssueDate.value = defaultDate;
   }
+  if (!els.affiliateJoinedDate.value) {
+    els.affiliateJoinedDate.value = defaultDate;
+  }
+  if (!els.affiliateContractEndDate.value) {
+    const { year, monthIndex } = parseMonth(state.currentMonth);
+    els.affiliateContractEndDate.value = formatISO(new Date(year + 1, monthIndex, 1));
+  }
 
   if (!isAdmin() && currentUser?.staffId) {
     els.fromStaff.value = currentUser.staffId;
@@ -1474,7 +1586,7 @@ function syncForms() {
 function applyPermissions() {
   const admin = isAdmin();
   const viewer = currentUser?.permission === "viewer";
-  if (!admin && activeModule === "documents") {
+  if (!admin && ["documents", "affiliates"].includes(activeModule)) {
     activeModule = "shift";
   }
   document.body.classList.toggle("is-staff", !admin);
@@ -1496,6 +1608,12 @@ function applyPermissions() {
   [els.importView, els.importMode, els.csvImportFile, els.csvPasteText].forEach((control) => {
     control.disabled = !admin;
   });
+
+  els.affiliateForm.querySelectorAll("input, textarea, button").forEach((control) => {
+    control.disabled = !admin;
+  });
+  els.exportAffiliatesCsvButton.disabled = !admin;
+  els.exportAffiliatesCsvButton.title = admin ? "" : "管理者のみ操作できます";
 
   els.shiftForm.querySelectorAll("input, select, button").forEach((control) => {
     control.disabled = !admin;
@@ -2073,6 +2191,33 @@ async function saveBusinessDocument(event) {
   }
 }
 
+async function saveAffiliatePartner(event) {
+  event.preventDefault();
+  if (!isAdmin()) return;
+
+  try {
+    const result = await api("/api/affiliate-partner", {
+      method: "POST",
+      body: {
+        companyNo: els.affiliateCompanyNo.value,
+        name: els.affiliateName.value,
+        joinedDate: els.affiliateJoinedDate.value,
+        contractEndDate: els.affiliateContractEndDate.value,
+        renewalTiming: els.affiliateRenewalTiming.value,
+        websiteUrl: els.affiliateWebsiteUrl.value,
+        handoverMemo: els.affiliateHandoverMemo.value,
+      },
+    });
+    mergeServerState(result.state);
+    els.affiliateForm.reset();
+    syncForms();
+    render();
+    toast(`${result.partner?.companyNo || "加盟店"}を保存しました`);
+  } catch (error) {
+    toast(error.message || "加盟店を保存できませんでした");
+  }
+}
+
 async function handleDocumentListClick(event) {
   const copyButton = event.target.closest("[data-doc-copy]");
   if (copyButton) {
@@ -2496,6 +2641,30 @@ function exportDocumentsCsv() {
   const rows = createDocumentCsvRows();
   downloadCsv(rows, `fm-daishi-documents-${state.currentMonth}.csv`);
   toast("書類送付CSVを書き出しました");
+}
+
+function createAffiliateCsvRows() {
+  const rows = [["会社番号", "会社名", "加盟した日付", "契約満了日", "更新時期", "WebサイトURL", "引き継ぎ事項", "更新者", "更新日時"]];
+  getSortedAffiliatePartners().forEach((item) => {
+    rows.push([
+      item.companyNo || "",
+      item.name || "",
+      item.joinedDate || "",
+      item.contractEndDate || "",
+      item.renewalTiming || "",
+      item.websiteUrl || "",
+      item.handoverMemo || "",
+      item.updatedByName || item.createdByName || "",
+      item.updatedAt || item.createdAt || "",
+    ]);
+  });
+  return rows;
+}
+
+function exportAffiliatesCsv() {
+  if (!isAdmin()) return;
+  downloadCsv(createAffiliateCsvRows(), `fm-daishi-affiliates-${state.currentMonth}.csv`);
+  toast("加盟店CSVを書き出しました");
 }
 
 function saveDocumentsToDrive() {
@@ -2956,7 +3125,7 @@ function setActiveView(view) {
 }
 
 function setActiveModule(module) {
-  activeModule = ["shift", "music", "content", "documents"].includes(module) ? module : "shift";
+  activeModule = ["shift", "music", "content", "documents", "affiliates"].includes(module) ? module : "shift";
   applyModuleVisibility();
 }
 
@@ -3001,6 +3170,7 @@ function applyModuleVisibility() {
   });
   document.body.classList.toggle("module-music", activeModule === "music");
   document.body.classList.toggle("module-content", activeModule === "content");
+  document.body.classList.toggle("module-affiliates", activeModule === "affiliates");
 }
 
 function mergeServerState(serverState) {
@@ -3492,7 +3662,61 @@ async function staticApi(path, options = {}) {
     return { state: store };
   }
 
+  if (method === "POST" && url.pathname === "/api/affiliate-partner") {
+    const store = normalizeStaticStore(await loadStaticStore());
+    const result = upsertStaticAffiliatePartner(store, options.body || {});
+    if (result.error) throw new Error(result.error);
+    store.updatedAt = new Date().toISOString();
+    store.version = Number(store.version || 1) + 1;
+    saveStaticStore(store);
+    return { state: store, partner: result.partner };
+  }
+
   throw new Error("納品確認用の静的公開版では保存操作は利用できません。");
+}
+
+function upsertStaticAffiliatePartner(store, body) {
+  const companyNo = String(body.companyNo || "").trim() || getNextStaticAffiliateCompanyNo(store);
+  const name = String(body.name || "").trim();
+  const joinedDate = String(body.joinedDate || "").trim();
+  const contractEndDate = String(body.contractEndDate || "").trim();
+  const websiteUrl = String(body.websiteUrl || "").trim();
+
+  if (!name) return { error: "会社名を入力してください。" };
+  if (!isValidDateString(joinedDate)) return { error: "加盟した日付が正しくありません。" };
+  if (!isValidDateString(contractEndDate)) return { error: "契約満了日が正しくありません。" };
+  if (websiteUrl && !isSafeHttpUrl(websiteUrl)) return { error: "WebサイトURLは http または https のURLで入力してください。" };
+  if ((store.affiliatePartners || []).some((item) => item.companyNo === companyNo)) {
+    return { error: "会社番号が重複しています。" };
+  }
+
+  const now = new Date().toISOString();
+  const partner = {
+    id: crypto.randomUUID(),
+    companyNo,
+    name,
+    joinedDate,
+    contractEndDate,
+    renewalTiming: String(body.renewalTiming || "").trim(),
+    websiteUrl,
+    handoverMemo: String(body.handoverMemo || "").trim(),
+    createdAt: now,
+    createdBy: currentUser?.id || "static",
+    createdByName: currentUser?.name || "静的デモ",
+    updatedAt: now,
+    updatedBy: currentUser?.id || "static",
+    updatedByName: currentUser?.name || "静的デモ",
+  };
+  store.affiliatePartners = [...(store.affiliatePartners || []), partner].sort(compareAffiliatePartners);
+  return { partner };
+}
+
+function getNextStaticAffiliateCompanyNo(store) {
+  const max = (store.affiliatePartners || []).reduce((value, item) => {
+    const match = String(item.companyNo || "").match(/(\d+)$/);
+    return match ? Math.max(value, Number(match[1])) : value;
+  }, 0);
+  return `FMK-${String(max + 1).padStart(4, "0")}`;
 }
 
 function normalizeScheduleMasters(value = {}) {
@@ -3678,6 +3902,7 @@ function normalizeStaticStore(store) {
   next.musicLibrary ||= [];
   next.musicSchedule ||= {};
   next.businessDocuments ||= [];
+  next.affiliatePartners = Array.isArray(next.affiliatePartners) ? next.affiliatePartners : seedAffiliatePartners();
   const legacySlots = isLegacyShiftSlots(next.shiftSlots);
   next.shiftSlots = Array.isArray(next.shiftSlots) && next.shiftSlots.length && !legacySlots ? next.shiftSlots : staticShiftSlots;
   if (legacySlots) {
@@ -3688,6 +3913,35 @@ function normalizeStaticStore(store) {
   next.updatedAt ||= new Date().toISOString();
   next.version ||= 1;
   return next;
+}
+
+function seedAffiliatePartners() {
+  return [
+    createSeedAffiliate("FMK-0001", "あさひ薬局 川崎大師店", "2024-04-01", "2027-03-31", "毎年1月に更新確認", "https://example.com/asahi-pharmacy", "健康情報コーナーの告知希望あり。薬剤師コメントは事前確認が必要。"),
+    createSeedAffiliate("FMK-0002", "大師商店街連合会", "2023-06-15", "2026-06-30", "満了2か月前", "https://example.com/daishi-shotengai", "商店街イベントは月初に広報担当へ確認。収録素材の納品先を毎回確認。"),
+    createSeedAffiliate("FMK-0003", "さくら通り整骨院", "2025-01-10", "2026-12-31", "毎年10月", "https://example.com/sakura-seikotsu", "季節の体調管理テーマを希望。専門用語は放送前に言い換え確認。"),
+    createSeedAffiliate("FMK-0004", "多摩川リビング株式会社", "2024-09-01", "2026-08-31", "満了3か月前", "https://example.com/tamagawa-living", "不動産市況コメントは代表確認後に放送。キャンペーン時期は春と秋。"),
+    createSeedAffiliate("FMK-0005", "はなみずき企画", "2025-03-20", "2027-03-19", "毎年12月", "https://example.com/hanamizuki", "イベント台本は2週間前までに共有。写真素材の利用許可を都度確認。"),
+  ];
+}
+
+function createSeedAffiliate(companyNo, name, joinedDate, contractEndDate, renewalTiming, websiteUrl, handoverMemo) {
+  return {
+    id: `affiliate-${companyNo.toLowerCase()}`,
+    companyNo,
+    name,
+    joinedDate,
+    contractEndDate,
+    renewalTiming,
+    websiteUrl,
+    handoverMemo,
+    createdAt: "2026-06-21T00:00:00.000Z",
+    createdBy: "system",
+    createdByName: "システム",
+    updatedAt: "2026-06-21T00:00:00.000Z",
+    updatedBy: "system",
+    updatedByName: "システム",
+  };
 }
 
 function saveStaticStore(store) {
@@ -3889,6 +4143,30 @@ function formatISO(date) {
 function formatDateShort(iso) {
   const date = parseISO(iso);
   return `${date.getMonth() + 1}/${date.getDate()}（${weekdayLabels[date.getDay()]}）`;
+}
+
+function formatOptionalDate(iso) {
+  return isValidDateString(iso) ? formatDateShort(iso) : "未設定";
+}
+
+function parseDateOrNull(value) {
+  if (!isValidDateString(value)) return null;
+  return parseISO(value);
+}
+
+function isValidDateString(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return false;
+  const date = parseISO(value);
+  return !Number.isNaN(date.getTime()) && formatISO(date) === value;
+}
+
+function isSafeHttpUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
 }
 
 function formatDateForSpeech(iso) {

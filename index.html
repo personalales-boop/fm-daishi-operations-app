@@ -83,6 +83,7 @@
         <button class="module-tab" type="button" data-module="music" data-short="音">音楽・選曲</button>
         <button class="module-tab" type="button" data-module="content" data-short="資">放送資料</button>
         <button class="module-tab admin-only" type="button" data-module="documents" data-short="書">書類送付</button>
+        <button class="module-tab admin-only" type="button" data-module="affiliates" data-short="盟">加盟店管理</button>
       </nav>
 
       <main class="workspace module-panel active" id="shiftModule" data-module-panel="shift">
@@ -799,6 +800,73 @@
             <div class="flow-list">
               <p class="import-note">一覧の「送付文コピー」でメール本文を作成し、Gmail等へ貼り付けて送付できます。送付後は「送付済み」、入金確認後は「入金済み」に変更します。</p>
             </div>
+          </section>
+        </aside>
+      </main>
+
+      <main class="workspace content-workspace module-panel admin-only" id="affiliatesModule" data-module-panel="affiliates" hidden>
+        <section class="main-column" aria-label="加盟店管理">
+          <div class="calendar-toolbar">
+            <div>
+              <p class="section-label">加盟店管理</p>
+              <h2>引き継ぎメモ</h2>
+            </div>
+            <div class="inline-controls">
+              <input class="archive-search" id="affiliateSearch" type="search" placeholder="会社名・会社番号・引き継ぎ事項で検索" />
+              <button class="ghost-button compact-action" id="exportAffiliatesCsvButton" type="button">CSV出力</button>
+            </div>
+          </div>
+
+          <div class="operations-strip" id="affiliateKpiStrip" aria-live="polite"></div>
+
+          <section class="list-section" aria-labelledby="affiliateListTitle">
+            <div class="section-heading">
+              <div>
+                <p class="section-label">あいうえお順</p>
+                <h2 id="affiliateListTitle">加盟店一覧</h2>
+              </div>
+            </div>
+            <div class="affiliate-list" id="affiliateList"></div>
+          </section>
+        </section>
+
+        <aside class="side-column" aria-label="加盟店登録">
+          <section class="tool-panel">
+            <div class="panel-heading">
+              <p class="section-label">新規登録</p>
+              <h2>加盟店を登録</h2>
+            </div>
+            <form id="affiliateForm" class="shift-form">
+              <div class="field-group">
+                <label for="affiliateCompanyNo">会社番号</label>
+                <input id="affiliateCompanyNo" name="affiliateCompanyNo" type="text" placeholder="未入力なら自動採番" />
+              </div>
+              <div class="field-group">
+                <label for="affiliateName">会社名</label>
+                <input id="affiliateName" name="affiliateName" type="text" placeholder="会社名・店舗名" required />
+              </div>
+              <div class="field-group">
+                <label for="affiliateJoinedDate">加盟した日付</label>
+                <input id="affiliateJoinedDate" name="affiliateJoinedDate" type="date" required />
+              </div>
+              <div class="field-group">
+                <label for="affiliateContractEndDate">契約満了日</label>
+                <input id="affiliateContractEndDate" name="affiliateContractEndDate" type="date" required />
+              </div>
+              <div class="field-group">
+                <label for="affiliateRenewalTiming">更新時期</label>
+                <input id="affiliateRenewalTiming" name="affiliateRenewalTiming" type="text" placeholder="例: 満了2か月前、毎年4月" />
+              </div>
+              <div class="field-group">
+                <label for="affiliateWebsiteUrl">WebサイトURL</label>
+                <input id="affiliateWebsiteUrl" name="affiliateWebsiteUrl" type="url" placeholder="https://example.com/" />
+              </div>
+              <div class="field-group">
+                <label for="affiliateHandoverMemo">引き継ぎ事項</label>
+                <textarea id="affiliateHandoverMemo" name="affiliateHandoverMemo" rows="5" placeholder="担当者、契約時の注意点、次回確認事項など"></textarea>
+              </div>
+              <button class="primary-button full-width" type="submit">加盟店を保存</button>
+            </form>
           </section>
         </aside>
       </main>

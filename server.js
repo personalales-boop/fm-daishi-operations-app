@@ -511,6 +511,24 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "POST" && url.pathname === "/api/affiliate-partner") {
+    if (!isAdmin(session.user)) {
+      sendJson(res, 403, { error: "加盟店管理は管理者のみ行えます。" });
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = upsertAffiliatePartner(body, session.user);
+    if (result.error) {
+      sendJson(res, 400, { error: result.error });
+      return;
+    }
+
+    saveAndBroadcast(true);
+    sendJson(res, 200, { state: store, partner: result.partner });
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/reset-demo") {
     if (!isAdmin(session.user)) {
       sendJson(res, 403, { error: "デモデータリセットは管理者のみ行えます。" });
@@ -977,6 +995,72 @@ function updateBusinessDocumentStatus(body, user) {
   return { document };
 }
 
+function upsertAffiliatePartner(body, user) {
+  const id = String(body.id || "").trim();
+  const companyNo = String(body.companyNo || "").trim() || getNextAffiliateCompanyNo();
+  const name = String(body.name || "").trim();
+  const joinedDate = String(body.joinedDate || "").trim();
+  const contractEndDate = String(body.contractEndDate || "").trim();
+  const renewalTiming = String(body.renewalTiming || "").trim();
+  const websiteUrl = String(body.websiteUrl || "").trim();
+  const handoverMemo = String(body.handoverMemo || "").trim();
+
+  if (!companyNo) return { error: "会社番号を入力してください。" };
+  if (!name) return { error: "会社名を入力してください。" };
+  if (!isValidDate(joinedDate)) return { error: "加盟した日付が正しくありません。" };
+  if (!isValidDate(contractEndDate)) return { error: "契約満了日が正しくありません。" };
+  if (websiteUrl && !isSafeHttpUrl(websiteUrl)) return { error: "WebサイトURLは http または https のURLで入力してください。" };
+
+  const duplicate = store.affiliatePartners.find((item) => item.companyNo === companyNo && item.id !== id);
+  if (duplicate) return { error: "会社番号が重複しています。" };
+
+  const existing = id ? store.affiliatePartners.find((item) => item.id === id) : null;
+  const partner = existing || {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    createdBy: user.id,
+    createdByName: user.name,
+  };
+
+  partner.companyNo = companyNo;
+  partner.name = name;
+  partner.joinedDate = joinedDate;
+  partner.contractEndDate = contractEndDate;
+  partner.renewalTiming = renewalTiming;
+  partner.websiteUrl = websiteUrl;
+  partner.handoverMemo = handoverMemo;
+  partner.updatedAt = new Date().toISOString();
+  partner.updatedBy = user.id;
+  partner.updatedByName = user.name;
+
+  if (!existing) store.affiliatePartners.unshift(partner);
+  store.affiliatePartners.sort(compareAffiliatePartners);
+  addAudit(user, existing ? "加盟店更新" : "加盟店登録", `${partner.companyNo} ${partner.name}を保存しました。`);
+  return { partner };
+}
+
+function getNextAffiliateCompanyNo() {
+  const max = (store.affiliatePartners || []).reduce((value, item) => {
+    const match = String(item.companyNo || "").match(/(\d+)$/);
+    return match ? Math.max(value, Number(match[1])) : value;
+  }, 0);
+  return `FMK-${pad(max + 1).padStart(4, "0")}`;
+}
+
+function compareAffiliatePartners(a, b) {
+  return String(a.name || "").localeCompare(String(b.name || ""), "ja", { sensitivity: "base", numeric: true }) ||
+    String(a.companyNo || "").localeCompare(String(b.companyNo || ""), "ja", { numeric: true });
+}
+
+function isSafeHttpUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
 function normalizeAmount(value) {
   const amount = Number(String(value || "0").replace(/[^\d.-]/g, ""));
   return Number.isFinite(amount) ? Math.max(0, Math.round(amount)) : 0;
@@ -1304,6 +1388,7 @@ function createDefaultStore() {
     musicLibrary: seedMusicLibrary(),
     musicSchedule: {},
     businessDocuments: seedBusinessDocuments(month),
+    affiliatePartners: seedAffiliatePartners(),
     shiftSlots,
     auditLog: [],
     updatedAt: new Date().toISOString(),
@@ -1343,6 +1428,7 @@ function normalizeStore(value) {
     musicLibrary: Array.isArray(value.musicLibrary) ? value.musicLibrary : seedMusicLibrary(),
     musicSchedule: value.musicSchedule || {},
     businessDocuments: Array.isArray(value.businessDocuments) ? value.businessDocuments : seedBusinessDocuments(monthKey(new Date())),
+    affiliatePartners: Array.isArray(value.affiliatePartners) ? value.affiliatePartners : seedAffiliatePartners(),
     shiftSlots,
     auditLog: Array.isArray(value.auditLog) ? value.auditLog : [],
     updatedAt: value.updatedAt || new Date().toISOString(),
@@ -1796,6 +1882,35 @@ function seedBusinessDocuments(month) {
       updatedByName: "清水 暁",
     },
   ];
+}
+
+function seedAffiliatePartners() {
+  return [
+    createSeedAffiliate("FMK-0001", "あさひ薬局 川崎大師店", "2024-04-01", "2027-03-31", "毎年1月に更新確認", "https://example.com/asahi-pharmacy", "健康情報コーナーの告知希望あり。薬剤師コメントは事前確認が必要。"),
+    createSeedAffiliate("FMK-0002", "大師商店街連合会", "2023-06-15", "2026-06-30", "満了2か月前", "https://example.com/daishi-shotengai", "商店街イベントは月初に広報担当へ確認。収録素材の納品先を毎回確認。"),
+    createSeedAffiliate("FMK-0003", "さくら通り整骨院", "2025-01-10", "2026-12-31", "毎年10月", "https://example.com/sakura-seikotsu", "季節の体調管理テーマを希望。専門用語は放送前に言い換え確認。"),
+    createSeedAffiliate("FMK-0004", "多摩川リビング株式会社", "2024-09-01", "2026-08-31", "満了3か月前", "https://example.com/tamagawa-living", "不動産市況コメントは代表確認後に放送。キャンペーン時期は春と秋。"),
+    createSeedAffiliate("FMK-0005", "はなみずき企画", "2025-03-20", "2027-03-19", "毎年12月", "https://example.com/hanamizuki", "イベント台本は2週間前までに共有。写真素材の利用許可を都度確認。"),
+  ];
+}
+
+function createSeedAffiliate(companyNo, name, joinedDate, contractEndDate, renewalTiming, websiteUrl, handoverMemo) {
+  return {
+    id: `affiliate-${companyNo.toLowerCase()}`,
+    companyNo,
+    name,
+    joinedDate,
+    contractEndDate,
+    renewalTiming,
+    websiteUrl,
+    handoverMemo,
+    createdAt: "2026-06-21T00:00:00.000Z",
+    createdBy: "system",
+    createdByName: "システム",
+    updatedAt: "2026-06-21T00:00:00.000Z",
+    updatedBy: "system",
+    updatedByName: "システム",
+  };
 }
 
 function seedMusicLibrary() {

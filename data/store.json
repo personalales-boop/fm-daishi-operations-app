@@ -4759,6 +4759,88 @@
       "updatedByName": "清水 暁"
     }
   ],
+  "affiliatePartners": [
+    {
+      "id": "affiliate-fmk-0001",
+      "companyNo": "FMK-0001",
+      "name": "あさひ薬局 川崎大師店",
+      "joinedDate": "2024-04-01",
+      "contractEndDate": "2027-03-31",
+      "renewalTiming": "毎年1月に更新確認",
+      "websiteUrl": "https://example.com/asahi-pharmacy",
+      "handoverMemo": "健康情報コーナーの告知希望あり。薬剤師コメントは事前確認が必要。",
+      "createdAt": "2026-06-21T00:00:00.000Z",
+      "createdBy": "system",
+      "createdByName": "システム",
+      "updatedAt": "2026-06-21T00:00:00.000Z",
+      "updatedBy": "system",
+      "updatedByName": "システム"
+    },
+    {
+      "id": "affiliate-fmk-0002",
+      "companyNo": "FMK-0002",
+      "name": "大師商店街連合会",
+      "joinedDate": "2023-06-15",
+      "contractEndDate": "2026-06-30",
+      "renewalTiming": "満了2か月前",
+      "websiteUrl": "https://example.com/daishi-shotengai",
+      "handoverMemo": "商店街イベントは月初に広報担当へ確認。収録素材の納品先を毎回確認。",
+      "createdAt": "2026-06-21T00:00:00.000Z",
+      "createdBy": "system",
+      "createdByName": "システム",
+      "updatedAt": "2026-06-21T00:00:00.000Z",
+      "updatedBy": "system",
+      "updatedByName": "システム"
+    },
+    {
+      "id": "affiliate-fmk-0003",
+      "companyNo": "FMK-0003",
+      "name": "さくら通り整骨院",
+      "joinedDate": "2025-01-10",
+      "contractEndDate": "2026-12-31",
+      "renewalTiming": "毎年10月",
+      "websiteUrl": "https://example.com/sakura-seikotsu",
+      "handoverMemo": "季節の体調管理テーマを希望。専門用語は放送前に言い換え確認。",
+      "createdAt": "2026-06-21T00:00:00.000Z",
+      "createdBy": "system",
+      "createdByName": "システム",
+      "updatedAt": "2026-06-21T00:00:00.000Z",
+      "updatedBy": "system",
+      "updatedByName": "システム"
+    },
+    {
+      "id": "affiliate-fmk-0004",
+      "companyNo": "FMK-0004",
+      "name": "多摩川リビング株式会社",
+      "joinedDate": "2024-09-01",
+      "contractEndDate": "2026-08-31",
+      "renewalTiming": "満了3か月前",
+      "websiteUrl": "https://example.com/tamagawa-living",
+      "handoverMemo": "不動産市況コメントは代表確認後に放送。キャンペーン時期は春と秋。",
+      "createdAt": "2026-06-21T00:00:00.000Z",
+      "createdBy": "system",
+      "createdByName": "システム",
+      "updatedAt": "2026-06-21T00:00:00.000Z",
+      "updatedBy": "system",
+      "updatedByName": "システム"
+    },
+    {
+      "id": "affiliate-fmk-0005",
+      "companyNo": "FMK-0005",
+      "name": "はなみずき企画",
+      "joinedDate": "2025-03-20",
+      "contractEndDate": "2027-03-19",
+      "renewalTiming": "毎年12月",
+      "websiteUrl": "https://example.com/hanamizuki",
+      "handoverMemo": "イベント台本は2週間前までに共有。写真素材の利用許可を都度確認。",
+      "createdAt": "2026-06-21T00:00:00.000Z",
+      "createdBy": "system",
+      "createdByName": "システム",
+      "updatedAt": "2026-06-21T00:00:00.000Z",
+      "updatedBy": "system",
+      "updatedByName": "システム"
+    }
+  ],
   "shiftSlots": [
     {
       "id": "hour_09",
@@ -4874,6 +4956,6 @@
       "createdAt": "2026-06-04T13:19:55.314Z"
     }
   ],
-  "updatedAt": "2026-06-21T11:31:27.442Z",
-  "version": 25
+  "updatedAt": "2026-06-21T16:54:25.869Z",
+  "version": 26
 }

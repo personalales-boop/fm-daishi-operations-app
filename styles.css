@@ -968,7 +968,8 @@ body.is-staff .status-strip {
 .playlist-list,
 .library-list,
 .content-list,
-.document-list {
+.document-list,
+.affiliate-list {
   display: grid;
   gap: 10px;
   margin-top: 14px;
@@ -1010,7 +1011,8 @@ body.is-staff .status-strip {
 .playlist-item,
 .library-item,
 .content-item,
-.document-item {
+.document-item,
+.affiliate-item {
   padding: 12px;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1028,7 +1030,8 @@ body.is-staff .status-strip {
 .playlist-item strong,
 .library-item strong,
 .content-item strong,
-.document-item strong {
+.document-item strong,
+.affiliate-item strong {
   display: block;
   color: var(--ink);
   font-size: 0.92rem;
@@ -1041,7 +1044,8 @@ body.is-staff .status-strip {
 .playlist-item span,
 .library-item span,
 .content-item span,
-.document-item span {
+.document-item span,
+.affiliate-item span {
   display: block;
   margin-top: 5px;
   color: var(--muted);
@@ -1094,19 +1098,53 @@ body.is-staff .status-strip {
   opacity: 0.76;
 }
 
+.affiliate-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  border-left: 5px solid var(--teal);
+}
+
+.affiliate-main {
+  min-width: 0;
+}
+
+.content-meta .company-no {
+  color: #ffffff;
+  background: var(--ink);
+}
+
 .content-item p,
-.document-item p {
+.document-item p,
+.affiliate-item p {
   margin: 8px 0 0;
   color: var(--text);
   font-size: 0.86rem;
   line-height: 1.55;
 }
 
-.document-actions {
+.document-actions,
+.affiliate-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.affiliate-actions a {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  color: var(--ink);
+  text-decoration: none;
+  background: #eef3ef;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
 .content-meta {
@@ -1739,15 +1777,18 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .document-item {
+  .document-item,
+  .affiliate-item {
     grid-template-columns: 1fr;
   }
 
-  .document-actions {
+  .document-actions,
+  .affiliate-actions {
     justify-content: stretch;
   }
 
-  .document-actions .small-button {
+  .document-actions .small-button,
+  .affiliate-actions a {
     flex: 1 1 120px;
   }
 }
