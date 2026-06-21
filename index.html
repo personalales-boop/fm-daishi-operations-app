@@ -108,12 +108,12 @@
                 <h2>作成・共有</h2>
               </div>
               <div class="quick-action-grid">
-                <button class="primary-button" id="shareDraftButton" type="button">仮シフトを共有</button>
-                <button class="danger-button" id="finalizeButton" type="button">確定シフトにする</button>
-                <button class="ghost-button" id="autoDraftButton" type="button">今月の仮シフトを自動作成</button>
-                <button class="ghost-button" id="exportButton" type="button">シフトCSV出力</button>
-                <button class="ghost-button" id="backupButton" type="button">バックアップJSON出力</button>
-                <button class="ghost-button" id="resetButton" type="button">デモデータに戻す</button>
+                <button class="primary-button" id="shareDraftButton" type="button" title="仮シフトを共有">仮シフト共有</button>
+                <button class="danger-button" id="finalizeButton" type="button" title="確定シフトにする">確定する</button>
+                <button class="ghost-button" id="autoDraftButton" type="button" title="今月の仮シフトを自動作成">自動作成</button>
+                <button class="ghost-button" id="exportButton" type="button" title="シフトをCSV出力">CSV出力</button>
+                <button class="ghost-button" id="backupButton" type="button" title="バックアップJSON出力">バックアップ</button>
+                <button class="ghost-button" id="resetButton" type="button" title="デモデータに戻す">デモ初期化</button>
               </div>
             </div>
 
@@ -137,15 +137,20 @@
           </nav>
 
           <section class="shift-tab-panel active" data-shift-panel="overview" aria-label="月間シフト">
-            <section class="today-summary-section" aria-labelledby="todaySummaryTitle">
+            <section class="today-summary-section collapsible is-collapsed" aria-labelledby="todaySummaryTitle" data-collapsible>
               <div class="section-heading compact-heading">
                 <div>
                   <p class="section-label">すぐ確認</p>
                   <h2 id="todaySummaryTitle">今日・明日の担当</h2>
                 </div>
-                <button class="ghost-button compact-action" id="copyTodayTomorrowButton" type="button">共有文をコピー</button>
+                <div class="inline-controls">
+                  <button class="ghost-button compact-action" id="copyTodayTomorrowButton" type="button">共有文コピー</button>
+                  <button class="collapse-toggle" type="button" data-collapse-target="topAssignmentBody" aria-expanded="false">開く</button>
+                </div>
               </div>
-              <div class="top-assignment-list" id="topAssignmentList"></div>
+              <div class="collapse-body" id="topAssignmentBody" hidden>
+                <div class="top-assignment-list" id="topAssignmentList"></div>
+              </div>
             </section>
 
             <div class="calendar-shell" aria-label="1ヶ月のシフト表">
@@ -170,12 +175,17 @@
                 <div class="issue-list" id="issueList"></div>
               </section>
 
-              <section class="tool-panel">
+              <section class="tool-panel collapsible is-collapsed" data-collapsible>
                 <div class="panel-heading">
-                  <p class="section-label">月間集計</p>
-                  <h2>担当回数</h2>
+                  <div>
+                    <p class="section-label">月間集計</p>
+                    <h2>担当回数</h2>
+                  </div>
+                  <button class="collapse-toggle" type="button" data-collapse-target="staffCountBody" aria-expanded="false">開く</button>
                 </div>
-                <div class="staff-count-list" id="staffCountList"></div>
+                <div class="collapse-body" id="staffCountBody" hidden>
+                  <div class="staff-count-list" id="staffCountList"></div>
+                </div>
               </section>
             </div>
 
@@ -438,13 +448,18 @@
             </div>
           </section>
 
-          <section class="tool-panel">
+          <section class="tool-panel collapsible is-collapsed" data-collapsible>
             <div class="panel-heading">
-              <p class="section-label">本日の最新状況</p>
-              <h2 id="todayHeading">--</h2>
+              <div>
+                <p class="section-label">本日の最新状況</p>
+                <h2 id="todayHeading">--</h2>
+              </div>
+              <button class="collapse-toggle" type="button" data-collapse-target="todayListBody" aria-expanded="false">開く</button>
             </div>
-            <div class="today-list" id="todayList"></div>
-            <p class="last-updated" id="lastUpdated">更新履歴なし</p>
+            <div class="collapse-body" id="todayListBody" hidden>
+              <div class="today-list" id="todayList"></div>
+              <p class="last-updated" id="lastUpdated">更新履歴なし</p>
+            </div>
           </section>
         </aside>
       </main>

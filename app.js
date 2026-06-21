@@ -870,7 +870,7 @@ function renderTopAssignments() {
               .map((id) => getStaff(id)?.name)
               .filter(Boolean)
               .join("、") || "未設定";
-          return `<span><strong>${escapeHtml(slot.short)}</strong>${escapeHtml(names)}</span>`;
+          return `<span><strong>${escapeHtml(slot.short)}</strong><em>${escapeHtml(names)}</em></span>`;
         })
         .join("");
 

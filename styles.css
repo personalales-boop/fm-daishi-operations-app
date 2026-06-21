@@ -527,7 +527,10 @@ body.is-staff .status-strip {
 }
 
 .top-assignment-card span {
-  display: block;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
   color: var(--muted);
   font-size: 0.8rem;
   font-weight: 800;
@@ -536,8 +539,15 @@ body.is-staff .status-strip {
 
 .top-assignment-card span strong {
   display: inline-flex;
-  min-width: 22px;
+  min-width: 0;
   color: var(--ink);
+  white-space: nowrap;
+}
+
+.top-assignment-card span em {
+  min-width: 0;
+  font: inherit;
+  overflow-wrap: anywhere;
 }
 
 .calendar-shell {
@@ -2355,8 +2365,7 @@ textarea {
   justify-content: center;
   padding-inline: 12px;
   text-align: center;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   font-size: 0.88rem;
   line-height: 1.25;
 }
