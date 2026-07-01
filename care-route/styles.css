@@ -151,6 +151,40 @@ button {
   gap: 12px;
 }
 
+.patient-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 4px;
+  background: var(--surface-soft);
+  border-radius: 16px;
+}
+
+.patient-tab {
+  min-height: 44px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  font-weight: 950;
+}
+
+.patient-tab.active {
+  color: #ffffff;
+  background: var(--blue);
+  box-shadow: 0 8px 18px rgba(11, 114, 217, 0.22);
+}
+
+.patient-tab-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.patient-tab-panel[hidden] {
+  display: none;
+}
+
 label span {
   display: block;
   margin: 0 0 6px;
@@ -300,6 +334,12 @@ input:focus {
   margin-top: 10px;
 }
 
+.registry-form-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
 .route-action-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -325,6 +365,10 @@ input:focus {
   border-radius: 14px;
 }
 
+.registry-card {
+  border-left-color: var(--green);
+}
+
 .patient-card strong,
 .result-stop strong,
 .empty-result strong,
@@ -344,14 +388,38 @@ input:focus {
   line-height: 1.5;
 }
 
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.call-button,
+.edit-button,
 .remove-button {
   min-height: 36px;
   padding: 0 10px;
+  border-radius: 12px;
+  font-weight: 950;
+}
+
+.call-button {
+  color: #ffffff;
+  background: var(--blue);
+  border: 1px solid var(--blue);
+}
+
+.edit-button {
+  color: #17446f;
+  background: #eaf4ff;
+  border: 1px solid #b8d9f7;
+}
+
+.remove-button {
   color: var(--red);
   background: #fff4f3;
   border: 1px solid #f0c0bd;
-  border-radius: 12px;
-  font-weight: 950;
 }
 
 #statusText {
@@ -554,5 +622,15 @@ input:focus {
   .patient-card,
   .result-stop {
     grid-template-columns: 1fr;
+  }
+
+  .card-actions,
+  .registry-form-actions {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .card-actions button {
+    flex: 1 1 100%;
   }
 }

@@ -70,43 +70,90 @@
               <span class="step-badge">3</span>
               <div>
                 <p>患者様</p>
-                <h2>住所と時間制約</h2>
+                <h2>送迎対象と登録</h2>
               </div>
             </div>
-            <form class="patient-form" id="patientForm">
-              <label>
-                <span>お名前</span>
-                <input id="patientName" type="text" placeholder="例: 田中様" required />
-              </label>
-              <label>
-                <span>住所</span>
-                <input id="patientAddress" type="text" placeholder="例: 川崎市川崎区大師町10-6" required />
-              </label>
-              <div class="form-row">
-                <label>
-                  <span>人数</span>
-                  <input id="patientPassengers" type="number" min="1" max="8" value="1" />
-                </label>
-                <label>
-                  <span>何時以降</span>
-                  <input id="patientEarliest" type="time" />
-                </label>
-                <label>
-                  <span>何時まで</span>
-                  <input id="patientLatest" type="time" />
-                </label>
-              </div>
-              <label class="check-line">
-                <input id="patientWheelchair" type="checkbox" />
-                <span>車椅子対応が必要</span>
-              </label>
-              <button class="secondary-button" type="submit">患者様を追加</button>
-            </form>
-            <div class="quick-actions">
-              <button class="ghost-button" id="sampleButton" type="button">サンプルを入れる</button>
-              <button class="ghost-button" id="clearPatientsButton" type="button">患者様を全て削除</button>
+            <div class="patient-tabs" role="tablist" aria-label="患者様メニュー">
+              <button class="patient-tab active" id="routeTab" type="button" role="tab" aria-controls="routePanel" aria-selected="true" data-patient-tab="route">今日の送迎</button>
+              <button class="patient-tab" id="registryTab" type="button" role="tab" aria-controls="registryPanel" aria-selected="false" data-patient-tab="registry">患者さま登録</button>
             </div>
-            <div class="patient-list" id="patientList"></div>
+
+            <div class="patient-tab-panel active" id="routePanel" role="tabpanel" aria-labelledby="routeTab" data-tab-panel="route">
+              <form class="patient-form" id="patientForm">
+                <label>
+                  <span>お名前</span>
+                  <input id="patientName" type="text" placeholder="例: 田中様" required />
+                </label>
+                <label>
+                  <span>住所</span>
+                  <input id="patientAddress" type="text" placeholder="例: 川崎市川崎区大師町10-6" required />
+                </label>
+                <div class="form-row">
+                  <label>
+                    <span>人数</span>
+                    <input id="patientPassengers" type="number" min="1" max="8" value="1" />
+                  </label>
+                  <label>
+                    <span>何時以降</span>
+                    <input id="patientEarliest" type="time" />
+                  </label>
+                  <label>
+                    <span>何時まで</span>
+                    <input id="patientLatest" type="time" />
+                  </label>
+                </div>
+                <label class="check-line">
+                  <input id="patientWheelchair" type="checkbox" />
+                  <span>車椅子対応が必要</span>
+                </label>
+                <button class="secondary-button" type="submit">今日の送迎に追加</button>
+              </form>
+              <div class="quick-actions">
+                <button class="ghost-button" id="sampleButton" type="button">サンプルを入れる</button>
+                <button class="ghost-button" id="clearPatientsButton" type="button">患者様を全て削除</button>
+              </div>
+              <div class="patient-list" id="patientList"></div>
+            </div>
+
+            <div class="patient-tab-panel" id="registryPanel" role="tabpanel" aria-labelledby="registryTab" data-tab-panel="registry" hidden>
+              <form class="patient-form" id="registryForm">
+                <label>
+                  <span>お名前</span>
+                  <input id="registryName" type="text" placeholder="例: 田中様" required />
+                </label>
+                <label>
+                  <span>住所</span>
+                  <input id="registryAddress" type="text" placeholder="例: 川崎市川崎区大師町10-6" required />
+                </label>
+                <div class="form-row">
+                  <label>
+                    <span>人数</span>
+                    <input id="registryPassengers" type="number" min="1" max="8" value="1" />
+                  </label>
+                  <label>
+                    <span>何時以降</span>
+                    <input id="registryEarliest" type="time" />
+                  </label>
+                  <label>
+                    <span>何時まで</span>
+                    <input id="registryLatest" type="time" />
+                  </label>
+                </div>
+                <label class="check-line">
+                  <input id="registryWheelchair" type="checkbox" />
+                  <span>車椅子対応が必要</span>
+                </label>
+                <div class="registry-form-actions">
+                  <button class="secondary-button" id="registrySubmitButton" type="submit">患者さまを登録</button>
+                  <button class="ghost-button" id="registryCancelEditButton" type="button" hidden>編集をやめる</button>
+                </div>
+              </form>
+              <div class="quick-actions">
+                <button class="ghost-button" id="importPatientsButton" type="button">今日の送迎から登録</button>
+                <button class="ghost-button" id="clearRegistryFormButton" type="button">入力をクリア</button>
+              </div>
+              <div class="patient-list" id="registryList"></div>
+            </div>
           </section>
 
           <section class="panel-card action-card">

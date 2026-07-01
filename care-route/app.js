@@ -82,9 +82,23 @@ const els = {
   patientEarliest: document.getElementById("patientEarliest"),
   patientLatest: document.getElementById("patientLatest"),
   patientWheelchair: document.getElementById("patientWheelchair"),
+  patientTabs: document.querySelectorAll("[data-patient-tab]"),
+  tabPanels: document.querySelectorAll("[data-tab-panel]"),
   sampleButton: document.getElementById("sampleButton"),
   clearPatientsButton: document.getElementById("clearPatientsButton"),
   patientList: document.getElementById("patientList"),
+  registryForm: document.getElementById("registryForm"),
+  registryName: document.getElementById("registryName"),
+  registryAddress: document.getElementById("registryAddress"),
+  registryPassengers: document.getElementById("registryPassengers"),
+  registryEarliest: document.getElementById("registryEarliest"),
+  registryLatest: document.getElementById("registryLatest"),
+  registryWheelchair: document.getElementById("registryWheelchair"),
+  registrySubmitButton: document.getElementById("registrySubmitButton"),
+  registryCancelEditButton: document.getElementById("registryCancelEditButton"),
+  importPatientsButton: document.getElementById("importPatientsButton"),
+  clearRegistryFormButton: document.getElementById("clearRegistryFormButton"),
+  registryList: document.getElementById("registryList"),
   optimizeButton: document.getElementById("optimizeButton"),
   autoRefreshButton: document.getElementById("autoRefreshButton"),
   googleMapsButton: document.getElementById("googleMapsButton"),
@@ -101,6 +115,7 @@ let lastRouteBounds = null;
 let lastRouteSnapshot = null;
 let lastGoogleMapsUrl = "";
 let autoRefreshTimer = null;
+let editingRegistryId = null;
 const geocodeCache = new Map();
 
 boot();
@@ -110,7 +125,9 @@ function boot() {
   bindEvents();
   initMap();
   syncInputsFromState();
+  renderPatientTabs();
   renderPatients();
+  renderRegisteredPatients();
   syncAutoRefresh();
 }
 
@@ -138,6 +155,18 @@ function bindEvents() {
   });
 
   els.patientForm.addEventListener("submit", addPatient);
+  els.registryForm.addEventListener("submit", saveRegisteredPatient);
+  els.registryList.addEventListener("click", handleRegisteredPatientAction);
+  els.importPatientsButton.addEventListener("click", registerCurrentPatients);
+  els.clearRegistryFormButton.addEventListener("click", resetRegistryForm);
+  els.registryCancelEditButton.addEventListener("click", resetRegistryForm);
+  els.patientTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      state.activePatientTab = tab.dataset.patientTab;
+      persist();
+      renderPatientTabs();
+    });
+  });
   els.sampleButton.addEventListener("click", useSamplePatients);
   els.clearPatientsButton.addEventListener("click", clearPatients);
   els.patientList.addEventListener("click", removePatient);
@@ -179,6 +208,20 @@ function syncInputsFromState() {
   els.endAddress.value = state.endAddress;
   els.startTime.value = state.startTime;
   els.useNowTime.checked = state.useNowTime !== false;
+}
+
+function renderPatientTabs() {
+  const activeTab = state.activePatientTab === "registry" ? "registry" : "route";
+  els.patientTabs.forEach((tab) => {
+    const isActive = tab.dataset.patientTab === activeTab;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+  });
+  els.tabPanels.forEach((panel) => {
+    const isActive = panel.dataset.tabPanel === activeTab;
+    panel.classList.toggle("active", isActive);
+    panel.hidden = !isActive;
+  });
 }
 
 function addPatient(event) {
@@ -315,7 +358,7 @@ function renderPatients() {
   const wheelchairCount = state.patients.filter((patient) => patient.wheelchair).length;
 
   if (!state.patients.length) {
-    els.patientList.innerHTML = `<div class="patient-card"><div><strong>患者様は未登録です</strong><span>住所と時間制約を入力するか、サンプルを入れてください。</span></div></div>`;
+    els.patientList.innerHTML = `<div class="patient-card"><div><strong>今日の送迎対象は未登録です</strong><span>住所と時間制約を入力するか、患者さま登録から呼び出してください。</span></div></div>`;
     return;
   }
 
@@ -337,6 +380,175 @@ function renderPatients() {
       </article>
     `).join("")}
   `;
+}
+
+function renderRegisteredPatients() {
+  const registeredPatients = [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja"));
+
+  if (!registeredPatients.length) {
+    els.registryList.innerHTML = `
+      <div class="patient-card">
+        <div>
+          <strong>登録済み患者さまはまだありません</strong>
+          <span>よく利用する患者さまを登録すると、次回から「呼び出す」だけで今日の送迎に追加できます。</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  els.registryList.innerHTML = `
+    <div class="patient-card">
+      <div>
+        <strong>登録済み ${registeredPatients.length}名</strong>
+        <span>「呼び出す」で今日の送迎対象に追加します。</span>
+      </div>
+    </div>
+    ${registeredPatients.map((patient) => `
+      <article class="patient-card registry-card">
+        <div>
+          <strong>${escapeHtml(patient.name)} ${patient.wheelchair ? "・車椅子" : ""}</strong>
+          <span>${escapeHtml(patient.address)}</span>
+          <span>${escapeHtml(formatWindow(patient))} / ${patient.passengers}名</span>
+        </div>
+        <div class="card-actions">
+          <button class="call-button" type="button" data-call-registry="${escapeHtml(patient.id)}">呼び出す</button>
+          <button class="edit-button" type="button" data-edit-registry="${escapeHtml(patient.id)}">編集</button>
+          <button class="remove-button" type="button" data-delete-registry="${escapeHtml(patient.id)}">削除</button>
+        </div>
+      </article>
+    `).join("")}
+  `;
+}
+
+function saveRegisteredPatient(event) {
+  event.preventDefault();
+  const registeredPatient = readRegistryForm();
+
+  if (!registeredPatient.name || !registeredPatient.address) {
+    setStatus("登録する患者さまのお名前と住所を入力してください。", true);
+    return;
+  }
+
+  const duplicate = state.registeredPatients.find((patient) => isSamePatientRecord(patient, registeredPatient));
+  const targetId = editingRegistryId || duplicate?.id || makeId();
+  const savedPatient = { ...registeredPatient, id: targetId };
+
+  if (editingRegistryId || duplicate) {
+    state.registeredPatients = state.registeredPatients.map((patient) => patient.id === targetId ? savedPatient : patient);
+    setStatus("登録済み患者さまを更新しました。");
+  } else {
+    state.registeredPatients.push(savedPatient);
+    setStatus("患者さまを登録しました。");
+  }
+
+  resetRegistryForm();
+  persist();
+  renderRegisteredPatients();
+}
+
+function readRegistryForm() {
+  return {
+    name: els.registryName.value.trim(),
+    address: els.registryAddress.value.trim(),
+    passengers: Math.max(1, Number(els.registryPassengers.value || 1)),
+    wheelchair: els.registryWheelchair.checked,
+    earliest: els.registryEarliest.value || "",
+    latest: els.registryLatest.value || "",
+  };
+}
+
+function handleRegisteredPatientAction(event) {
+  const callButton = event.target.closest("[data-call-registry]");
+  const editButton = event.target.closest("[data-edit-registry]");
+  const deleteButton = event.target.closest("[data-delete-registry]");
+
+  if (callButton) addRegisteredPatientToRoute(callButton.dataset.callRegistry);
+  if (editButton) startEditingRegisteredPatient(editButton.dataset.editRegistry);
+  if (deleteButton) deleteRegisteredPatient(deleteButton.dataset.deleteRegistry);
+}
+
+function addRegisteredPatientToRoute(id) {
+  const registeredPatient = state.registeredPatients.find((patient) => patient.id === id);
+  if (!registeredPatient) return;
+
+  if (state.patients.some((patient) => patient.registryId === id || isSamePatientRecord(patient, registeredPatient))) {
+    state.activePatientTab = "route";
+    persist();
+    renderPatientTabs();
+    setStatus(`${registeredPatient.name} はすでに今日の送迎に入っています。`, true);
+    return;
+  }
+
+  state.patients.push({
+    ...registeredPatient,
+    id: makeId(),
+    registryId: registeredPatient.id,
+  });
+  state.activePatientTab = "route";
+  persist();
+  renderPatientTabs();
+  renderPatients();
+  setStatus(`${registeredPatient.name} を今日の送迎に追加しました。`);
+}
+
+function startEditingRegisteredPatient(id) {
+  const registeredPatient = state.registeredPatients.find((patient) => patient.id === id);
+  if (!registeredPatient) return;
+
+  editingRegistryId = id;
+  els.registryName.value = registeredPatient.name;
+  els.registryAddress.value = registeredPatient.address;
+  els.registryPassengers.value = registeredPatient.passengers || 1;
+  els.registryEarliest.value = registeredPatient.earliest || "";
+  els.registryLatest.value = registeredPatient.latest || "";
+  els.registryWheelchair.checked = Boolean(registeredPatient.wheelchair);
+  els.registrySubmitButton.textContent = "登録内容を更新";
+  els.registryCancelEditButton.hidden = false;
+  setStatus(`${registeredPatient.name} の登録内容を編集中です。`);
+}
+
+function deleteRegisteredPatient(id) {
+  const registeredPatient = state.registeredPatients.find((patient) => patient.id === id);
+  state.registeredPatients = state.registeredPatients.filter((patient) => patient.id !== id);
+  if (editingRegistryId === id) resetRegistryForm();
+  persist();
+  renderRegisteredPatients();
+  setStatus(registeredPatient ? `${registeredPatient.name} を登録一覧から削除しました。` : "登録済み患者さまを削除しました。");
+}
+
+function registerCurrentPatients() {
+  if (!state.patients.length) {
+    setStatus("今日の送迎に患者さまがいないため、登録できません。", true);
+    return;
+  }
+
+  let addedCount = 0;
+  state.patients.forEach((patient) => {
+    if (state.registeredPatients.some((registeredPatient) => isSamePatientRecord(registeredPatient, patient))) return;
+    state.registeredPatients.push({
+      id: makeId(),
+      name: patient.name,
+      address: patient.address,
+      passengers: patient.passengers || 1,
+      wheelchair: Boolean(patient.wheelchair),
+      earliest: patient.earliest || "",
+      latest: patient.latest || "",
+    });
+    addedCount += 1;
+  });
+
+  persist();
+  renderRegisteredPatients();
+  setStatus(addedCount ? `今日の送迎から${addedCount}名を登録しました。` : "今日の送迎対象はすべて登録済みです。");
+}
+
+function resetRegistryForm() {
+  editingRegistryId = null;
+  els.registryForm.reset();
+  els.registryPassengers.value = "1";
+  els.registrySubmitButton.textContent = "患者さまを登録";
+  els.registryCancelEditButton.hidden = true;
 }
 
 async function optimizeRoute(options = {}) {
@@ -730,6 +942,15 @@ function formatWindow(patient) {
   return "時間指定なし";
 }
 
+function isSamePatientRecord(a, b) {
+  return normalizeText(a?.name) === normalizeText(b?.name) &&
+    normalizeText(a?.address) === normalizeText(b?.address);
+}
+
+function normalizeText(value) {
+  return String(value || "").replace(/\s+/g, "").trim();
+}
+
 function normalizeKawasakiAddress(address) {
   const text = String(address || "").trim();
   if (!text.includes("川崎市")) return `神奈川県川崎市川崎区 ${text}`;
@@ -801,6 +1022,8 @@ function loadState() {
         autoRefresh: Boolean(saved.autoRefresh),
         vehicleId: saved.vehicleId || "car1",
         patients: Array.isArray(saved.patients) ? saved.patients : [],
+        registeredPatients: Array.isArray(saved.registeredPatients) ? saved.registeredPatients : [],
+        activePatientTab: saved.activePatientTab === "registry" ? "registry" : "route",
       };
     }
   } catch {
@@ -814,6 +1037,8 @@ function loadState() {
     autoRefresh: false,
     vehicleId: "car1",
     patients: [],
+    registeredPatients: [],
+    activePatientTab: "route",
   };
 }
 
