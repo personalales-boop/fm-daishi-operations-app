@@ -56,16 +56,29 @@ const samplePatients = [
 ];
 
 const knownLocations = [
-  { key: "大師町10-6", lat: 35.5338309, lon: 139.7306612 },
-  { key: "大師町10番6", lat: 35.5338309, lon: 139.7306612 },
-  { key: "川崎区役所", lat: 35.53082, lon: 139.70306 },
-  { key: "東田町8", lat: 35.53082, lon: 139.70306 },
-  { key: "大師公園", lat: 35.53591, lon: 139.73007 },
-  { key: "川崎大師駅", lat: 35.53474, lon: 139.72575 },
-  { key: "小田栄駅", lat: 35.51537, lon: 139.70516 },
-  { key: "浜川崎駅", lat: 35.51044, lon: 139.7134 },
-  { key: "港町駅", lat: 35.53519, lon: 139.71393 },
-  { key: "鈴木町駅", lat: 35.53641, lon: 139.72024 },
+  { key: "大師町10-6", aliases: ["大師町10番6", "アイスタッフ大師", "アイスタッフケアステーション大師"], lat: 35.5338309, lon: 139.7306612 },
+  { key: "川崎区役所", aliases: ["区役所", "東田町8"], lat: 35.53082, lon: 139.70306 },
+  { key: "川崎駅", aliases: ["JR川崎駅", "JR川崎"], lat: 35.5302136, lon: 139.6973611 },
+  { key: "京急川崎駅", aliases: ["京急川崎", "京浜急行川崎駅", "京浜急行川崎"], lat: 35.53283, lon: 139.7007815 },
+  { key: "八丁畷駅", aliases: ["八丁畷"], lat: 35.5230147, lon: 139.6917276 },
+  { key: "川崎新町駅", aliases: ["川崎新町"], lat: 35.5182574, lon: 139.6991819 },
+  { key: "小田栄駅", aliases: ["小田栄"], lat: 35.5146193, lon: 139.7048669 },
+  { key: "浜川崎駅", aliases: ["浜川崎"], lat: 35.5103253, lon: 139.7137564 },
+  { key: "武蔵白石駅", aliases: ["武蔵白石"], lat: 35.5018116, lon: 139.7062924 },
+  { key: "安善駅", aliases: ["安善"], lat: 35.4997193, lon: 139.7010367 },
+  { key: "扇町駅", aliases: ["扇町"], lat: 35.5012754, lon: 139.7222348 },
+  { key: "昭和駅", aliases: ["昭和"], lat: 35.5064693, lon: 139.7240507 },
+  { key: "大川駅", aliases: ["大川"], lat: 35.4957, lon: 139.7119 },
+  { key: "港町駅", aliases: ["港町"], lat: 35.5350326, lon: 139.7124679 },
+  { key: "鈴木町駅", aliases: ["鈴木町"], lat: 35.5354136, lon: 139.7206509 },
+  { key: "川崎大師駅", aliases: ["川崎大師", "大師駅"], lat: 35.53474, lon: 139.72575 },
+  { key: "東門前駅", aliases: ["東門前"], lat: 35.5365833, lon: 139.7343911 },
+  { key: "大師橋駅", aliases: ["大師橋", "産業道路駅", "産業道路"], lat: 35.5366217, lon: 139.7405764 },
+  { key: "小島新田駅", aliases: ["小島新田"], lat: 35.5347674, lon: 139.7479108 },
+  { key: "大師公園", aliases: ["川崎大師公園"], lat: 35.53591, lon: 139.73007 },
+  { key: "川崎大師平間寺", aliases: ["平間寺"], lat: 35.5342515, lon: 139.7294416 },
+  { key: "川崎市立川崎病院", aliases: ["市立川崎病院", "川崎病院"], lat: 35.52922, lon: 139.70753 },
+  { key: "川崎競馬場", aliases: ["競馬場"], lat: 35.53298, lon: 139.70933 },
 ];
 
 const els = {
@@ -689,33 +702,36 @@ async function geocodeAddress(address, label) {
   const coordinate = parseCoordinate(address);
   if (coordinate) return coordinate;
 
-  const known = knownLocations.find((item) => address.includes(item.key));
+  const known = findKnownLocation(address);
   if (known) return { lat: known.lat, lon: known.lon, label };
 
-  const query = normalizeKawasakiAddress(address);
-  const cacheKey = query.toLowerCase();
-  if (geocodeCache.has(cacheKey)) return geocodeCache.get(cacheKey);
+  const queries = buildGeocodeQueries(address);
+  for (const query of queries) {
+    const cacheKey = query.toLowerCase();
+    if (geocodeCache.has(cacheKey)) return geocodeCache.get(cacheKey);
 
-  const params = new URLSearchParams({
-    format: "jsonv2",
-    limit: "1",
-    countrycodes: "jp",
-    bounded: "1",
-    viewbox: `${KAWASAKI_BOUNDS.west},${KAWASAKI_BOUNDS.north},${KAWASAKI_BOUNDS.east},${KAWASAKI_BOUNDS.south}`,
-    q: query,
-  });
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) throw new Error(`${label}の住所検索に失敗しました。`);
-  const results = await response.json();
-  if (!results.length) throw new Error(`${label}の住所が見つかりませんでした。川崎区内の住所を入力してください。`);
-  const location = { lat: Number(results[0].lat), lon: Number(results[0].lon), label };
-  if (!isInKawasakiBounds(location)) {
-    throw new Error(`${label}は川崎区の範囲外の可能性があります。住所を確認してください。`);
+    const params = new URLSearchParams({
+      format: "jsonv2",
+      limit: "3",
+      countrycodes: "jp",
+      bounded: "1",
+      viewbox: `${KAWASAKI_BOUNDS.west},${KAWASAKI_BOUNDS.north},${KAWASAKI_BOUNDS.east},${KAWASAKI_BOUNDS.south}`,
+      q: query,
+    });
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error(`${label}の住所検索に失敗しました。`);
+    const results = await response.json();
+    const result = results.find((item) => isInKawasakiBounds({ lat: Number(item.lat), lon: Number(item.lon) }));
+    if (!result) continue;
+
+    const location = { lat: Number(result.lat), lon: Number(result.lon), label };
+    geocodeCache.set(cacheKey, location);
+    return location;
   }
-  geocodeCache.set(cacheKey, location);
-  return location;
+
+  throw new Error(`${label}の住所が見つかりませんでした。川崎区内の住所、駅名、施設名を入力してください。`);
 }
 
 async function fetchDrivingRoute(points) {
@@ -949,6 +965,45 @@ function isSamePatientRecord(a, b) {
 
 function normalizeText(value) {
   return String(value || "").replace(/\s+/g, "").trim();
+}
+
+function findKnownLocation(address) {
+  const normalizedAddress = normalizeLocationKey(address);
+  if (!normalizedAddress) return null;
+
+  return knownLocations
+    .flatMap((location) => getLocationKeys(location).map((key) => ({
+      location,
+      normalizedKey: normalizeLocationKey(key),
+    })))
+    .filter((item) => item.normalizedKey && normalizedAddress.includes(item.normalizedKey))
+    .sort((a, b) => b.normalizedKey.length - a.normalizedKey.length)[0]?.location || null;
+}
+
+function getLocationKeys(location) {
+  return [location.key, ...(location.aliases || [])].filter(Boolean);
+}
+
+function normalizeLocationKey(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[‐-‒–—―ー−ｰ]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/ヶ/g, "ケ");
+}
+
+function buildGeocodeQueries(address) {
+  const text = String(address || "").trim();
+  const queries = [normalizeKawasakiAddress(text)];
+  if (!text.includes("駅") && !looksLikeStreetAddress(text)) {
+    queries.push(normalizeKawasakiAddress(`${text}駅`));
+  }
+  return [...new Set(queries)];
+}
+
+function looksLikeStreetAddress(text) {
+  return /[0-9０-９]|丁目|番|号|町|区|市|通|ビル|マンション|アパート/.test(text);
 }
 
 function normalizeKawasakiAddress(address) {
