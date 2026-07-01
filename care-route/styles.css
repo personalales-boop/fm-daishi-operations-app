@@ -1,0 +1,508 @@
+:root {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-soft: #eef4f8;
+  --ink: #172331;
+  --text: #465363;
+  --muted: #6f7b88;
+  --line: #dbe3ec;
+  --blue: #0b72d9;
+  --blue-dark: #0757a8;
+  --green: #098a65;
+  --amber: #b76a00;
+  --red: #c4312f;
+  --shadow: 0 16px 40px rgba(30, 48, 68, 0.12);
+  --radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px clamp(16px, 4vw, 40px);
+  color: #ffffff;
+  background: #10253f;
+}
+
+.app-header h1,
+.map-toolbar h2,
+.section-title h2 {
+  margin: 0;
+  color: inherit;
+  line-height: 1.2;
+}
+
+.app-header h1 {
+  font-size: clamp(1.5rem, 3.6vw, 2.4rem);
+}
+
+.eyebrow,
+.section-title p {
+  margin: 0 0 5px;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  opacity: 0.76;
+}
+
+.header-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.header-status span {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  padding: 0 12px;
+  color: #10253f;
+  background: #d8ebff;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(360px, 440px) minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px;
+}
+
+.control-panel,
+.map-panel {
+  min-width: 0;
+}
+
+.control-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.panel-card,
+.map-panel,
+.result-panel,
+.notice-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.panel-card {
+  padding: 16px;
+}
+
+.section-title {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.section-title h2 {
+  color: var(--ink);
+  font-size: 1.06rem;
+}
+
+.step-badge {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: #ffffff;
+  background: var(--blue);
+  border-radius: 50%;
+  font-weight: 950;
+}
+
+.field-grid,
+.patient-form {
+  display: grid;
+  gap: 12px;
+}
+
+label span {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid #cfd8e3;
+  border-radius: 12px;
+}
+
+input:focus {
+  border-color: var(--blue);
+  outline: 3px solid rgba(11, 114, 217, 0.18);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 84px 1fr 1fr;
+  gap: 10px;
+}
+
+.check-line {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: var(--surface-soft);
+  border-radius: 12px;
+}
+
+.check-line input {
+  width: 22px;
+  min-height: 22px;
+}
+
+.check-line span {
+  margin: 0;
+}
+
+.vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.vehicle-card {
+  display: grid;
+  gap: 5px;
+  min-height: 92px;
+  padding: 12px;
+  text-align: left;
+  color: var(--text);
+  background: #ffffff;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+}
+
+.vehicle-card.active {
+  border-color: var(--blue);
+  background: #eaf4ff;
+}
+
+.vehicle-card strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.vehicle-card span {
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.primary-button,
+.secondary-button,
+.ghost-button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: 14px;
+  font-weight: 950;
+}
+
+.primary-button {
+  width: 100%;
+  color: #ffffff;
+  background: var(--blue);
+  border: 1px solid var(--blue);
+  font-size: 1.08rem;
+}
+
+.primary-button:hover {
+  background: var(--blue-dark);
+}
+
+.secondary-button {
+  width: 100%;
+  color: #ffffff;
+  background: var(--green);
+  border: 1px solid var(--green);
+}
+
+.ghost-button {
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
+.ghost-button.compact {
+  min-height: 40px;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.patient-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.patient-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  background: #fbfcfe;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--blue);
+  border-radius: 14px;
+}
+
+.patient-card strong,
+.result-stop strong,
+.empty-result strong,
+.notice-panel strong {
+  display: block;
+  color: var(--ink);
+}
+
+.patient-card span,
+.result-stop span,
+.empty-result span,
+.notice-panel span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.86rem;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.remove-button {
+  min-height: 36px;
+  padding: 0 10px;
+  color: var(--red);
+  background: #fff4f3;
+  border: 1px solid #f0c0bd;
+  border-radius: 12px;
+  font-weight: 950;
+}
+
+#statusText {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.map-panel {
+  display: grid;
+  grid-template-rows: auto minmax(480px, 58vh) auto auto;
+  overflow: hidden;
+}
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.map-toolbar h2 {
+  color: var(--ink);
+  font-size: 1.16rem;
+}
+
+.route-map {
+  width: 100%;
+  min-height: 480px;
+  background: #dce6ef;
+}
+
+.result-panel {
+  margin: 14px;
+  padding: 14px;
+  box-shadow: none;
+}
+
+.notice-panel {
+  margin: 0 14px 14px;
+  padding: 12px 14px;
+  color: var(--text);
+  background: #fff8e9;
+  border-color: #f1d59b;
+  box-shadow: none;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.summary-card {
+  padding: 12px;
+  background: var(--surface-soft);
+  border-radius: 14px;
+}
+
+.summary-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.summary-card strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 1.08rem;
+}
+
+.warning-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.warning-item {
+  padding: 10px 12px;
+  color: #5c3300;
+  background: #fff4dc;
+  border-left: 5px solid var(--amber);
+  border-radius: 12px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.warning-item.danger {
+  color: #641b1a;
+  background: #fff0ef;
+  border-left-color: var(--red);
+}
+
+.result-list {
+  display: grid;
+  gap: 9px;
+}
+
+.result-stop {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.order-number {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: #ffffff;
+  background: var(--blue);
+  border-radius: 50%;
+  font-weight: 950;
+}
+
+.route-marker {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: #ffffff;
+  background: var(--blue);
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  font-weight: 950;
+}
+
+.route-marker.start,
+.route-marker.end {
+  background: var(--green);
+}
+
+@media (max-width: 980px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .map-panel {
+    grid-template-rows: auto 420px auto auto;
+  }
+
+  .route-map {
+    min-height: 420px;
+  }
+}
+
+@media (max-width: 620px) {
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workspace {
+    padding: 12px;
+  }
+
+  .form-row,
+  .vehicle-grid,
+  .quick-actions,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-card,
+  .result-stop {
+    grid-template-columns: 1fr;
+  }
+}

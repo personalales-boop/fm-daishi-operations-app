@@ -2019,11 +2019,15 @@ function addAudit(user, action, detail) {
 
 async function serveStatic(res, requestedPath) {
   const cleanPath = requestedPath === "/" ? "/index.html" : decodeURIComponent(requestedPath);
-  const filePath = path.normalize(path.join(ROOT_DIR, cleanPath));
+  let filePath = path.normalize(path.join(ROOT_DIR, cleanPath));
 
   if (!filePath.startsWith(ROOT_DIR)) {
     sendText(res, 403, "Forbidden");
     return;
+  }
+
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+    filePath = path.join(filePath, "index.html");
   }
 
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {

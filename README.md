@@ -24,6 +24,12 @@ node server.js
 https://personalales-boop.github.io/fm-daishi-operations-app/
 ```
 
+介護送迎ルートアプリ:
+
+```text
+https://personalales-boop.github.io/fm-daishi-operations-app/care-route/
+```
+
 GitHub Pages では Node.js の `/api/*` が動かないため、アプリは自動で静的公開モードに切り替わります。
 
 - `お客様確認用 / PIN 2222` で閲覧できます

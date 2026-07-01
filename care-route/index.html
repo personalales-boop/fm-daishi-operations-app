@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>川崎区 介護送迎ルート</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b72d9'/%3E%3Cpath d='M8 21h16M10 17h12l-2-6h-8l-2 6Zm2 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z' fill='white'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">川崎市川崎区限定</p>
+          <h1>介護送迎ルート</h1>
+        </div>
+        <div class="header-status">
+          <span>4台対応</span>
+          <span>時間制約</span>
+          <span>地図表示</span>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="control-panel" aria-label="送迎ルート入力">
+          <section class="panel-card">
+            <div class="section-title">
+              <span class="step-badge">1</span>
+              <div>
+                <p>出発・到着</p>
+                <h2>拠点と出発時刻</h2>
+              </div>
+            </div>
+            <div class="field-grid">
+              <label>
+                <span>出発地</span>
+                <input id="startAddress" type="text" autocomplete="street-address" />
+              </label>
+              <label>
+                <span>到着地</span>
+                <input id="endAddress" type="text" autocomplete="street-address" placeholder="空欄なら最後の患者様で終了" />
+              </label>
+              <label>
+                <span>出発予定</span>
+                <input id="startTime" type="time" value="08:30" />
+              </label>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-title">
+              <span class="step-badge">2</span>
+              <div>
+                <p>車両選択</p>
+                <h2>定員と車椅子</h2>
+              </div>
+            </div>
+            <div class="vehicle-grid" id="vehicleGrid"></div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-title">
+              <span class="step-badge">3</span>
+              <div>
+                <p>患者様</p>
+                <h2>住所と時間制約</h2>
+              </div>
+            </div>
+            <form class="patient-form" id="patientForm">
+              <label>
+                <span>お名前</span>
+                <input id="patientName" type="text" placeholder="例: 田中様" required />
+              </label>
+              <label>
+                <span>住所</span>
+                <input id="patientAddress" type="text" placeholder="例: 川崎市川崎区東田町8" required />
+              </label>
+              <div class="form-row">
+                <label>
+                  <span>人数</span>
+                  <input id="patientPassengers" type="number" min="1" max="8" value="1" />
+                </label>
+                <label>
+                  <span>何時以降</span>
+                  <input id="patientEarliest" type="time" />
+                </label>
+                <label>
+                  <span>何時まで</span>
+                  <input id="patientLatest" type="time" />
+                </label>
+              </div>
+              <label class="check-line">
+                <input id="patientWheelchair" type="checkbox" />
+                <span>車椅子対応が必要</span>
+              </label>
+              <button class="secondary-button" type="submit">患者様を追加</button>
+            </form>
+            <div class="quick-actions">
+              <button class="ghost-button" id="sampleButton" type="button">サンプルを入れる</button>
+              <button class="ghost-button" id="clearPatientsButton" type="button">患者様を全て削除</button>
+            </div>
+            <div class="patient-list" id="patientList"></div>
+          </section>
+
+          <section class="panel-card action-card">
+            <button class="primary-button" id="optimizeButton" type="button">最速ルートを作成</button>
+            <p id="statusText">患者様を入力して、車両を選んでください。</p>
+          </section>
+        </section>
+
+        <section class="map-panel" aria-label="地図と結果">
+          <div class="map-toolbar">
+            <div>
+              <p class="eyebrow">地図</p>
+              <h2>送迎順と走行ルート</h2>
+            </div>
+            <button class="ghost-button compact" id="fitMapButton" type="button">全体表示</button>
+          </div>
+          <div id="map" class="route-map" role="application" aria-label="送迎ルート地図"></div>
+          <section class="result-panel" id="resultPanel">
+            <div class="empty-result">
+              <strong>まだルートは作成されていません</strong>
+              <span>住所を入れて「最速ルートを作成」を押すと、順番・到着目安・注意点が表示されます。</span>
+            </div>
+          </section>
+          <section class="notice-panel">
+            <strong>運用メモ</strong>
+            <span>一方通行を含む道路ルートはOSM/OSRMの道路データで算出します。リアルタイム渋滞は未接続です。本番ではGoogle Maps等の交通API契約を推奨します。</span>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
