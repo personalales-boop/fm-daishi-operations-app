@@ -91,6 +91,8 @@ const knownLocations = [
 ];
 
 const els = {
+  appTabs: document.querySelectorAll("[data-app-tab]"),
+  appPanels: document.querySelectorAll("[data-app-panel]"),
   startAddress: document.getElementById("startAddress"),
   endAddress: document.getElementById("endAddress"),
   startTime: document.getElementById("startTime"),
@@ -104,8 +106,6 @@ const els = {
   patientEarliest: document.getElementById("patientEarliest"),
   patientLatest: document.getElementById("patientLatest"),
   patientWheelchair: document.getElementById("patientWheelchair"),
-  patientTabs: document.querySelectorAll("[data-patient-tab]"),
-  tabPanels: document.querySelectorAll("[data-tab-panel]"),
   sampleButton: document.getElementById("sampleButton"),
   clearPatientsButton: document.getElementById("clearPatientsButton"),
   patientList: document.getElementById("patientList"),
@@ -147,7 +147,7 @@ function boot() {
   bindEvents();
   initMap();
   syncInputsFromState();
-  renderPatientTabs();
+  renderAppTabs();
   renderPatients();
   renderRegisteredPatients();
   syncAutoRefresh();
@@ -182,11 +182,11 @@ function bindEvents() {
   els.importPatientsButton.addEventListener("click", registerCurrentPatients);
   els.clearRegistryFormButton.addEventListener("click", resetRegistryForm);
   els.registryCancelEditButton.addEventListener("click", resetRegistryForm);
-  els.patientTabs.forEach((tab) => {
+  els.appTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      state.activePatientTab = tab.dataset.patientTab;
+      state.activeAppTab = tab.dataset.appTab;
       persist();
-      renderPatientTabs();
+      renderAppTabs();
     });
   });
   els.sampleButton.addEventListener("click", useSamplePatients);
@@ -232,18 +232,26 @@ function syncInputsFromState() {
   els.useNowTime.checked = state.useNowTime !== false;
 }
 
-function renderPatientTabs() {
-  const activeTab = state.activePatientTab === "registry" ? "registry" : "route";
-  els.patientTabs.forEach((tab) => {
-    const isActive = tab.dataset.patientTab === activeTab;
+function renderAppTabs() {
+  const activeTab = ["plan", "map", "customers"].includes(state.activeAppTab) ? state.activeAppTab : "plan";
+  els.appTabs.forEach((tab) => {
+    const isActive = tab.dataset.appTab === activeTab;
     tab.classList.toggle("active", isActive);
     tab.setAttribute("aria-selected", String(isActive));
   });
-  els.tabPanels.forEach((panel) => {
-    const isActive = panel.dataset.tabPanel === activeTab;
+  els.appPanels.forEach((panel) => {
+    const isActive = panel.dataset.appPanel === activeTab;
     panel.classList.toggle("active", isActive);
     panel.hidden = !isActive;
   });
+  window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+
+  if (activeTab === "map") {
+    window.setTimeout(() => {
+      map.invalidateSize();
+      fitRouteBounds();
+    }, 80);
+  }
 }
 
 function addPatient(event) {
@@ -458,10 +466,10 @@ function saveRegisteredPatient(event) {
 
   if (editingRegistryId || duplicate) {
     state.registeredPatients = state.registeredPatients.map((patient) => patient.id === targetId ? savedPatient : patient);
-    setStatus("登録済み患者さまを更新しました。");
+    setStatus("登録済み顧客を更新しました。");
   } else {
     state.registeredPatients.push(savedPatient);
-    setStatus("患者さまを登録しました。");
+    setStatus("顧客を登録しました。");
   }
 
   resetRegistryForm();
@@ -495,9 +503,9 @@ function addRegisteredPatientToRoute(id) {
   if (!registeredPatient) return;
 
   if (state.patients.some((patient) => patient.registryId === id || isSamePatientRecord(patient, registeredPatient))) {
-    state.activePatientTab = "route";
+    state.activeAppTab = "plan";
     persist();
-    renderPatientTabs();
+    renderAppTabs();
     setStatus(`${registeredPatient.name} はすでに今日の送迎に入っています。`, true);
     return;
   }
@@ -507,9 +515,9 @@ function addRegisteredPatientToRoute(id) {
     id: makeId(),
     registryId: registeredPatient.id,
   });
-  state.activePatientTab = "route";
+  state.activeAppTab = "plan";
   persist();
-  renderPatientTabs();
+  renderAppTabs();
   renderPatients();
   setStatus(`${registeredPatient.name} を今日の送迎に追加しました。`);
 }
@@ -569,7 +577,7 @@ function resetRegistryForm() {
   editingRegistryId = null;
   els.registryForm.reset();
   els.registryPassengers.value = "1";
-  els.registrySubmitButton.textContent = "患者さまを登録";
+  els.registrySubmitButton.textContent = "顧客を登録";
   els.registryCancelEditButton.hidden = true;
 }
 
@@ -603,6 +611,9 @@ async function optimizeRoute(options = {}) {
     const best = findBestOrder(start, stops, end);
     const osrmRoute = await fetchDrivingRoute([start, ...best.ordered.map((item) => item.location), ...(end ? [end] : [])]);
     renderRoute(start, best, end, osrmRoute, validation.warnings);
+    state.activeAppTab = "map";
+    persist();
+    renderAppTabs();
     setStatus(options.silent ? `自動更新しました。${formatClock(new Date())}` : "ルートを作成しました。");
   } catch (error) {
     setStatus(error.message || "ルート作成に失敗しました。", true);
@@ -1123,7 +1134,7 @@ function loadState() {
         vehicleId: saved.vehicleId || "car1",
         patients: Array.isArray(saved.patients) ? saved.patients : [],
         registeredPatients: Array.isArray(saved.registeredPatients) ? saved.registeredPatients : [],
-        activePatientTab: saved.activePatientTab === "registry" ? "registry" : "route",
+        activeAppTab: ["plan", "map", "customers"].includes(saved.activeAppTab) ? saved.activeAppTab : "plan",
       };
     }
   } catch {
@@ -1138,7 +1149,7 @@ function loadState() {
     vehicleId: "car1",
     patients: [],
     registeredPatients: [],
-    activePatientTab: "route",
+    activeAppTab: "plan",
   };
 }
 

@@ -23,62 +23,64 @@
         </div>
       </header>
 
+      <nav class="app-nav" role="tablist" aria-label="介護送迎メニュー">
+        <button class="app-tab active" id="planTab" type="button" role="tab" aria-controls="planPanel" aria-selected="true" data-app-tab="plan">送迎登録</button>
+        <button class="app-tab" id="mapTab" type="button" role="tab" aria-controls="mapPanel" aria-selected="false" data-app-tab="map">地図・ルート</button>
+        <button class="app-tab" id="customersTab" type="button" role="tab" aria-controls="customersPanel" aria-selected="false" data-app-tab="customers">顧客登録</button>
+      </nav>
+      <p class="global-status" id="statusText">患者様を入力して、車両を選んでください。</p>
+
       <main class="workspace">
-        <section class="control-panel" aria-label="送迎ルート入力">
-          <section class="panel-card">
-            <div class="section-title">
-              <span class="step-badge">1</span>
-              <div>
-                <p>出発・到着</p>
-                <h2>拠点と出発時刻</h2>
+        <section class="app-tab-panel active" id="planPanel" role="tabpanel" aria-labelledby="planTab" data-app-panel="plan">
+          <section class="control-panel route-entry-panel" aria-label="送迎登録">
+            <section class="panel-card">
+              <div class="section-title">
+                <span class="step-badge">1</span>
+                <div>
+                  <p>出発・到着</p>
+                  <h2>拠点と出発時刻</h2>
+                </div>
               </div>
-            </div>
-            <div class="field-grid">
-              <label>
-                <span>出発地</span>
-                <input id="startAddress" type="text" autocomplete="street-address" placeholder="例: 川崎市川崎区大師町10-6 / 川崎大師駅" />
-              </label>
-              <button class="ghost-button full-button" id="useLocationButton" type="button">現在地を出発地にする</button>
-              <label>
-                <span>到着地</span>
-                <input id="endAddress" type="text" autocomplete="street-address" placeholder="空欄なら最後の患者様で終了" />
-              </label>
-              <label>
-                <span>出発予定</span>
-                <input id="startTime" type="time" value="08:30" />
-              </label>
-              <label class="check-line compact-check">
-                <input id="useNowTime" type="checkbox" checked />
-                <span>計算時は現在時刻を使う</span>
-              </label>
-            </div>
-          </section>
-
-          <section class="panel-card">
-            <div class="section-title">
-              <span class="step-badge">2</span>
-              <div>
-                <p>車両選択</p>
-                <h2>定員と車椅子</h2>
+              <div class="field-grid">
+                <label>
+                  <span>出発地</span>
+                  <input id="startAddress" type="text" autocomplete="street-address" placeholder="例: 川崎市川崎区大師町10-6 / 川崎大師駅" />
+                </label>
+                <button class="ghost-button full-button" id="useLocationButton" type="button">現在地を出発地にする</button>
+                <label>
+                  <span>到着地</span>
+                  <input id="endAddress" type="text" autocomplete="street-address" placeholder="空欄なら最後の患者様で終了" />
+                </label>
+                <label>
+                  <span>出発予定</span>
+                  <input id="startTime" type="time" value="08:30" />
+                </label>
+                <label class="check-line compact-check">
+                  <input id="useNowTime" type="checkbox" checked />
+                  <span>計算時は現在時刻を使う</span>
+                </label>
               </div>
-            </div>
-            <div class="vehicle-grid" id="vehicleGrid"></div>
-          </section>
+            </section>
 
-          <section class="panel-card">
-            <div class="section-title">
-              <span class="step-badge">3</span>
-              <div>
-                <p>患者様</p>
-                <h2>送迎対象と登録</h2>
+            <section class="panel-card">
+              <div class="section-title">
+                <span class="step-badge">2</span>
+                <div>
+                  <p>車両選択</p>
+                  <h2>定員と車椅子</h2>
+                </div>
               </div>
-            </div>
-            <div class="patient-tabs" role="tablist" aria-label="患者様メニュー">
-              <button class="patient-tab active" id="routeTab" type="button" role="tab" aria-controls="routePanel" aria-selected="true" data-patient-tab="route">今日の送迎</button>
-              <button class="patient-tab" id="registryTab" type="button" role="tab" aria-controls="registryPanel" aria-selected="false" data-patient-tab="registry">患者さま登録</button>
-            </div>
+              <div class="vehicle-grid" id="vehicleGrid"></div>
+            </section>
 
-            <div class="patient-tab-panel active" id="routePanel" role="tabpanel" aria-labelledby="routeTab" data-tab-panel="route">
+            <section class="panel-card">
+              <div class="section-title">
+                <span class="step-badge">3</span>
+                <div>
+                  <p>今日の送迎</p>
+                  <h2>送迎対象を追加</h2>
+                </div>
+              </div>
               <form class="patient-form" id="patientForm">
                 <label>
                   <span>お名前</span>
@@ -113,9 +115,51 @@
                 <button class="ghost-button" id="clearPatientsButton" type="button">患者様を全て削除</button>
               </div>
               <div class="patient-list" id="patientList"></div>
-            </div>
+            </section>
 
-            <div class="patient-tab-panel" id="registryPanel" role="tabpanel" aria-labelledby="registryTab" data-tab-panel="registry" hidden>
+            <section class="panel-card action-card">
+              <button class="primary-button" id="optimizeButton" type="button">最速ルートを作成</button>
+              <div class="route-action-row">
+                <button class="ghost-button" id="autoRefreshButton" type="button">3分ごとに自動更新</button>
+                <button class="ghost-button" id="googleMapsButton" type="button" disabled>Googleマップで確認</button>
+              </div>
+            </section>
+          </section>
+        </section>
+
+        <section class="app-tab-panel" id="mapPanel" role="tabpanel" aria-labelledby="mapTab" data-app-panel="map" hidden>
+          <section class="map-panel" aria-label="地図と結果">
+            <div class="map-toolbar">
+              <div>
+                <p class="eyebrow">地図</p>
+                <h2>送迎順と走行ルート</h2>
+              </div>
+              <button class="ghost-button compact" id="fitMapButton" type="button">全体表示</button>
+            </div>
+            <div id="map" class="route-map" role="application" aria-label="送迎ルート地図"></div>
+            <section class="result-panel" id="resultPanel">
+              <div class="empty-result">
+                <strong>まだルートは作成されていません</strong>
+                <span>送迎登録で「最速ルートを作成」を押すと、順番・到着目安・注意点が表示されます。</span>
+              </div>
+            </section>
+            <section class="notice-panel">
+              <strong>運用メモ</strong>
+              <span>無料モードでは、OSRMの道路ルートを3分ごとに再取得し、現在時刻と時間帯補正で到着目安を更新します。Googleマップで開くと端末側のライブ交通状況も確認できます。</span>
+            </section>
+          </section>
+        </section>
+
+        <section class="app-tab-panel" id="customersPanel" role="tabpanel" aria-labelledby="customersTab" data-app-panel="customers" hidden>
+          <section class="control-panel customer-panel" aria-label="顧客登録">
+            <section class="panel-card">
+              <div class="section-title">
+                <span class="step-badge">顧</span>
+                <div>
+                  <p>顧客登録</p>
+                  <h2>よく送迎する利用者さま</h2>
+                </div>
+              </div>
               <form class="patient-form" id="registryForm">
                 <label>
                   <span>お名前</span>
@@ -144,7 +188,7 @@
                   <span>車椅子対応が必要</span>
                 </label>
                 <div class="registry-form-actions">
-                  <button class="secondary-button" id="registrySubmitButton" type="submit">患者さまを登録</button>
+                  <button class="secondary-button" id="registrySubmitButton" type="submit">顧客を登録</button>
                   <button class="ghost-button" id="registryCancelEditButton" type="button" hidden>編集をやめる</button>
                 </div>
               </form>
@@ -153,37 +197,7 @@
                 <button class="ghost-button" id="clearRegistryFormButton" type="button">入力をクリア</button>
               </div>
               <div class="patient-list" id="registryList"></div>
-            </div>
-          </section>
-
-          <section class="panel-card action-card">
-            <button class="primary-button" id="optimizeButton" type="button">最速ルートを作成</button>
-            <div class="route-action-row">
-              <button class="ghost-button" id="autoRefreshButton" type="button">3分ごとに自動更新</button>
-              <button class="ghost-button" id="googleMapsButton" type="button" disabled>Googleマップで確認</button>
-            </div>
-            <p id="statusText">患者様を入力して、車両を選んでください。</p>
-          </section>
-        </section>
-
-        <section class="map-panel" aria-label="地図と結果">
-          <div class="map-toolbar">
-            <div>
-              <p class="eyebrow">地図</p>
-              <h2>送迎順と走行ルート</h2>
-            </div>
-            <button class="ghost-button compact" id="fitMapButton" type="button">全体表示</button>
-          </div>
-          <div id="map" class="route-map" role="application" aria-label="送迎ルート地図"></div>
-          <section class="result-panel" id="resultPanel">
-            <div class="empty-result">
-              <strong>まだルートは作成されていません</strong>
-              <span>住所を入れて「最速ルートを作成」を押すと、順番・到着目安・注意点が表示されます。</span>
-            </div>
-          </section>
-          <section class="notice-panel">
-            <strong>運用メモ</strong>
-            <span>無料モードでは、OSRMの道路ルートを3分ごとに再取得し、現在時刻と時間帯補正で到着目安を更新します。Googleマップで開くと端末側のライブ交通状況も確認できます。</span>
+            </section>
           </section>
         </section>
       </main>
