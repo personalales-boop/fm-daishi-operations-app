@@ -19,6 +19,7 @@
           <span>4台対応</span>
           <span>時間制約</span>
           <span>地図表示</span>
+          <span>準リアルタイム</span>
         </div>
       </header>
 
@@ -37,6 +38,7 @@
                 <span>出発地</span>
                 <input id="startAddress" type="text" autocomplete="street-address" />
               </label>
+              <button class="ghost-button full-button" id="useLocationButton" type="button">現在地を出発地にする</button>
               <label>
                 <span>到着地</span>
                 <input id="endAddress" type="text" autocomplete="street-address" placeholder="空欄なら最後の患者様で終了" />
@@ -44,6 +46,10 @@
               <label>
                 <span>出発予定</span>
                 <input id="startTime" type="time" value="08:30" />
+              </label>
+              <label class="check-line compact-check">
+                <input id="useNowTime" type="checkbox" checked />
+                <span>計算時は現在時刻を使う</span>
               </label>
             </div>
           </section>
@@ -105,6 +111,10 @@
 
           <section class="panel-card action-card">
             <button class="primary-button" id="optimizeButton" type="button">最速ルートを作成</button>
+            <div class="route-action-row">
+              <button class="ghost-button" id="autoRefreshButton" type="button">3分ごとに自動更新</button>
+              <button class="ghost-button" id="googleMapsButton" type="button" disabled>Googleマップで確認</button>
+            </div>
             <p id="statusText">患者様を入力して、車両を選んでください。</p>
           </section>
         </section>
@@ -126,7 +136,7 @@
           </section>
           <section class="notice-panel">
             <strong>運用メモ</strong>
-            <span>一方通行を含む道路ルートはOSM/OSRMの道路データで算出します。リアルタイム渋滞は未接続です。本番ではGoogle Maps等の交通API契約を推奨します。</span>
+            <span>無料モードでは、OSRMの道路ルートを3分ごとに再取得し、現在時刻と時間帯補正で到着目安を更新します。Googleマップで開くと端末側のライブ交通状況も確認できます。</span>
           </section>
         </section>
       </main>

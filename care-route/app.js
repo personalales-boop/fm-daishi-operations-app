@@ -1,4 +1,5 @@
 const STORAGE_KEY = "care-route-kawasaki-v1";
+const AUTO_REFRESH_MS = 180000;
 const KAWASAKI_CENTER = [35.5297, 139.7081];
 const KAWASAKI_BOUNDS = {
   south: 35.485,
@@ -68,6 +69,8 @@ const els = {
   startAddress: document.getElementById("startAddress"),
   endAddress: document.getElementById("endAddress"),
   startTime: document.getElementById("startTime"),
+  useLocationButton: document.getElementById("useLocationButton"),
+  useNowTime: document.getElementById("useNowTime"),
   vehicleGrid: document.getElementById("vehicleGrid"),
   patientForm: document.getElementById("patientForm"),
   patientName: document.getElementById("patientName"),
@@ -80,6 +83,8 @@ const els = {
   clearPatientsButton: document.getElementById("clearPatientsButton"),
   patientList: document.getElementById("patientList"),
   optimizeButton: document.getElementById("optimizeButton"),
+  autoRefreshButton: document.getElementById("autoRefreshButton"),
+  googleMapsButton: document.getElementById("googleMapsButton"),
   statusText: document.getElementById("statusText"),
   fitMapButton: document.getElementById("fitMapButton"),
   resultPanel: document.getElementById("resultPanel"),
@@ -90,6 +95,10 @@ let map;
 let markerLayer;
 let routeLayer;
 let lastRouteBounds = null;
+let lastRouteSnapshot = null;
+let lastGoogleMapsUrl = "";
+let autoRefreshTimer = null;
+const geocodeCache = new Map();
 
 boot();
 
@@ -99,6 +108,7 @@ function boot() {
   initMap();
   syncInputsFromState();
   renderPatients();
+  syncAutoRefresh();
 }
 
 function bindEvents() {
@@ -119,13 +129,21 @@ function bindEvents() {
       persist();
     });
   });
+  els.useNowTime.addEventListener("change", () => {
+    state.useNowTime = els.useNowTime.checked;
+    persist();
+  });
 
   els.patientForm.addEventListener("submit", addPatient);
   els.sampleButton.addEventListener("click", useSamplePatients);
   els.clearPatientsButton.addEventListener("click", clearPatients);
   els.patientList.addEventListener("click", removePatient);
+  els.useLocationButton.addEventListener("click", useCurrentLocationAsStart);
   els.optimizeButton.addEventListener("click", optimizeRoute);
+  els.autoRefreshButton.addEventListener("click", toggleAutoRefresh);
+  els.googleMapsButton.addEventListener("click", openGoogleMapsRoute);
   els.fitMapButton.addEventListener("click", fitRouteBounds);
+  window.addEventListener("beforeunload", () => window.clearInterval(autoRefreshTimer));
 }
 
 function initMap() {
@@ -157,6 +175,7 @@ function syncInputsFromState() {
   els.startAddress.value = state.startAddress;
   els.endAddress.value = state.endAddress;
   els.startTime.value = state.startTime;
+  els.useNowTime.checked = state.useNowTime !== false;
 }
 
 function addPatient(event) {
@@ -197,14 +216,27 @@ function removePatient(event) {
 function useSamplePatients() {
   state.startAddress = "川崎市川崎区東田町8 川崎区役所";
   state.endAddress = "川崎市川崎区東田町8 川崎区役所";
-  state.startTime = "08:45";
+  state.startTime = state.useNowTime !== false ? getCurrentTimeValue() : "08:45";
   state.vehicleId = "car2";
-  state.patients = samplePatients.map((patient) => ({ ...patient, id: makeId() }));
+  state.patients = buildCurrentSamplePatients();
   persist();
   syncInputsFromState();
   renderVehicles();
   renderPatients();
   setStatus("川崎区内のサンプル患者様を入れました。");
+}
+
+function buildCurrentSamplePatients() {
+  const start = state.useNowTime !== false ? timeToMinutes(getCurrentTimeValue()) + 15 : 9 * 60;
+  return samplePatients.map((patient, index) => {
+    const earliest = start + index * 20;
+    return {
+      ...patient,
+      id: makeId(),
+      earliest: formatMinutes(earliest),
+      latest: formatMinutes(earliest + 45),
+    };
+  });
 }
 
 function clearPatients() {
@@ -213,6 +245,65 @@ function clearPatients() {
   renderPatients();
   clearRoute();
   setStatus("患者様リストを空にしました。");
+}
+
+async function useCurrentLocationAsStart() {
+  if (!navigator.geolocation) {
+    setStatus("この端末では現在地を取得できません。", true);
+    return;
+  }
+
+  setStatus("現在地を取得しています。");
+  els.useLocationButton.disabled = true;
+  try {
+    const position = await getCurrentPosition();
+    const location = {
+      lat: position.coords.latitude,
+      lon: position.coords.longitude,
+    };
+    if (!isInKawasakiBounds(location)) {
+      setStatus("現在地が川崎区外の可能性があります。必要なら住所を直接入力してください。", true);
+    }
+    state.startAddress = `${location.lat.toFixed(6)},${location.lon.toFixed(6)}`;
+    els.startAddress.value = state.startAddress;
+    persist();
+    setStatus("現在地を出発地にしました。");
+  } catch {
+    setStatus("現在地の取得が許可されませんでした。住所を入力してください。", true);
+  } finally {
+    els.useLocationButton.disabled = false;
+  }
+}
+
+function getCurrentPosition() {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 60000,
+    });
+  });
+}
+
+function toggleAutoRefresh() {
+  state.autoRefresh = !state.autoRefresh;
+  persist();
+  syncAutoRefresh();
+  if (state.autoRefresh) {
+    optimizeRoute({ silent: true });
+  }
+}
+
+function syncAutoRefresh() {
+  window.clearInterval(autoRefreshTimer);
+  autoRefreshTimer = null;
+  els.autoRefreshButton.classList.toggle("active", Boolean(state.autoRefresh));
+  els.autoRefreshButton.textContent = state.autoRefresh ? "自動更新中（3分）" : "3分ごとに自動更新";
+
+  if (!state.autoRefresh) return;
+  autoRefreshTimer = window.setInterval(() => {
+    optimizeRoute({ silent: true });
+  }, AUTO_REFRESH_MS);
 }
 
 function renderPatients() {
@@ -245,10 +336,12 @@ function renderPatients() {
   `;
 }
 
-async function optimizeRoute() {
+async function optimizeRoute(options = {}) {
   state.startAddress = els.startAddress.value.trim();
   state.endAddress = els.endAddress.value.trim();
-  state.startTime = els.startTime.value || "08:30";
+  state.useNowTime = els.useNowTime.checked;
+  state.startTime = state.useNowTime ? getCurrentTimeValue() : els.startTime.value || "08:30";
+  els.startTime.value = state.startTime;
   persist();
 
   const validation = validatePlan();
@@ -258,7 +351,7 @@ async function optimizeRoute() {
     return;
   }
 
-  setBusy(true, "住所を確認し、ルートを作成しています。");
+  setBusy(true, options.silent ? "自動更新で再確認しています。" : "住所を確認し、ルートを作成しています。");
 
   try {
     const start = await geocodeAddress(state.startAddress, "出発地");
@@ -273,7 +366,7 @@ async function optimizeRoute() {
     const best = findBestOrder(start, stops, end);
     const osrmRoute = await fetchDrivingRoute([start, ...best.ordered.map((item) => item.location), ...(end ? [end] : [])]);
     renderRoute(start, best, end, osrmRoute, validation.warnings);
-    setStatus("ルートを作成しました。");
+    setStatus(options.silent ? `自動更新しました。${formatClock(new Date())}` : "ルートを作成しました。");
   } catch (error) {
     setStatus(error.message || "ルート作成に失敗しました。", true);
     renderError(error);
@@ -303,7 +396,7 @@ function validatePlan() {
   if (totalPassengers > 4 && vehicle.id !== "car3") {
     warnings.push("合計5名以上の送迎です。通常運用では3号車の利用も検討してください。");
   }
-  warnings.push("リアルタイム渋滞は未接続です。実走行前に交通状況を確認してください。");
+  warnings.push("無料モードです。3分ごとの道路ルート再取得と時間帯補正で、できるだけ現在状況に近づけます。");
   return { blockers, warnings };
 }
 
@@ -329,7 +422,7 @@ function scoreOrder(start, order, end, startMinute) {
 
   for (const stop of order) {
     const km = haversineKm(current, stop.location);
-    const travelMinutes = Math.max(4, Math.round((km / 22) * 60));
+    const travelMinutes = Math.max(4, Math.round((km / 22) * 60 * getLocalTrafficFactor(cursor)));
     cursor += travelMinutes;
     const earliest = stop.earliest ? timeToMinutes(stop.earliest) : null;
     const latest = stop.latest ? timeToMinutes(stop.latest) : null;
@@ -352,7 +445,7 @@ function scoreOrder(start, order, end, startMinute) {
   if (end) {
     const backKm = haversineKm(current, end);
     distanceKm += backKm;
-    cursor += Math.max(4, Math.round((backKm / 22) * 60));
+    cursor += Math.max(4, Math.round((backKm / 22) * 60 * getLocalTrafficFactor(cursor)));
   }
 
   return {
@@ -385,6 +478,9 @@ async function geocodeAddress(address, label) {
   if (known) return { lat: known.lat, lon: known.lon, label };
 
   const query = normalizeKawasakiAddress(address);
+  const cacheKey = query.toLowerCase();
+  if (geocodeCache.has(cacheKey)) return geocodeCache.get(cacheKey);
+
   const params = new URLSearchParams({
     format: "jsonv2",
     limit: "1",
@@ -403,6 +499,7 @@ async function geocodeAddress(address, label) {
   if (!isInKawasakiBounds(location)) {
     throw new Error(`${label}は川崎区の範囲外の可能性があります。住所を確認してください。`);
   }
+  geocodeCache.set(cacheKey, location);
   return location;
 }
 
@@ -449,8 +546,29 @@ function renderRoute(start, plan, end, route, warnings) {
   fitRouteBounds();
 
   const distanceKm = route ? route.distance / 1000 : plan.distanceKm;
-  const durationMinutes = route ? Math.round(route.duration / 60) : plan.estimatedMinutes;
+  const driveMinutes = route ? Math.round(route.duration / 60) : plan.estimatedMinutes;
+  const durationMinutes = Math.max(plan.estimatedMinutes, Math.round(driveMinutes * getLocalTrafficFactor(timeToMinutes(state.startTime))));
   const vehicle = getVehicle();
+  const checkedAt = new Date();
+  const previousSnapshot = lastRouteSnapshot;
+  const deltaMinutes = previousSnapshot ? durationMinutes - previousSnapshot.durationMinutes : 0;
+  const deltaText = previousSnapshot ? `${deltaMinutes >= 0 ? "+" : ""}${deltaMinutes}分` : "初回";
+  const trafficLabel = getTrafficFactorLabel(timeToMinutes(state.startTime));
+
+  if (previousSnapshot && Math.abs(deltaMinutes) >= 3) {
+    routeWarnings.push(`前回確認から所要時間が ${deltaText} 変わりました。`);
+  }
+  if (state.autoRefresh) {
+    routeWarnings.push("自動更新中です。3分ごとに道路ルートを再確認します。");
+  }
+
+  lastRouteSnapshot = {
+    durationMinutes,
+    distanceKm,
+    checkedAt: checkedAt.toISOString(),
+  };
+  lastGoogleMapsUrl = buildGoogleMapsUrl(plan, end);
+  els.googleMapsButton.disabled = !lastGoogleMapsUrl;
 
   els.resultPanel.innerHTML = `
     <div class="summary-grid">
@@ -458,6 +576,10 @@ function renderRoute(start, plan, end, route, warnings) {
       <div class="summary-card"><span>人数</span><strong>${getTotalPassengers()} / ${vehicle.capacity}名</strong></div>
       <div class="summary-card"><span>距離</span><strong>${distanceKm.toFixed(1)}km</strong></div>
       <div class="summary-card"><span>目安</span><strong>${durationMinutes}分</strong></div>
+    </div>
+    <div class="live-status">
+      <strong>最終確認 ${escapeHtml(formatClock(checkedAt))} / 前回比 ${escapeHtml(deltaText)}</strong>
+      <span>${state.useNowTime ? "現在時刻で計算" : "指定時刻で計算"} / ${escapeHtml(trafficLabel)} / Googleマップで開くと端末側のライブ交通状況も確認できます。</span>
     </div>
     ${renderWarnings(routeWarnings, plan.lateMinutes)}
     <div class="result-list">
@@ -515,6 +637,8 @@ function clearRoute() {
   markerLayer?.clearLayers();
   routeLayer?.clearLayers();
   lastRouteBounds = null;
+  lastGoogleMapsUrl = "";
+  els.googleMapsButton.disabled = true;
 }
 
 function fitRouteBounds() {
@@ -534,6 +658,52 @@ function setBusy(isBusy, message = "") {
 function setStatus(message, danger = false) {
   els.statusText.textContent = message;
   els.statusText.style.color = danger ? "var(--red)" : "var(--muted)";
+}
+
+function openGoogleMapsRoute() {
+  if (!lastGoogleMapsUrl) return;
+  window.open(lastGoogleMapsUrl, "_blank", "noopener,noreferrer");
+}
+
+function buildGoogleMapsUrl(plan, end) {
+  if (!state.startAddress || !plan.ordered.length) return "";
+  const lastStop = plan.ordered[plan.ordered.length - 1];
+  const destination = end ? state.endAddress : lastStop?.address;
+  const waypoints = end ? plan.ordered.map((stop) => stop.address) : plan.ordered.slice(0, -1).map((stop) => stop.address);
+  const params = new URLSearchParams({
+    api: "1",
+    travelmode: "driving",
+    origin: state.startAddress,
+    destination: destination || state.startAddress,
+  });
+  if (waypoints.length) {
+    params.set("waypoints", waypoints.join("|"));
+  }
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+function getLocalTrafficFactor(minute) {
+  const minutes = Number(minute || 0) % 1440;
+  if (minutes >= 7 * 60 && minutes <= 9 * 60 + 30) return 1.2;
+  if (minutes >= 16 * 60 + 30 && minutes <= 19 * 60) return 1.18;
+  if (minutes >= 11 * 60 + 30 && minutes <= 13 * 60 + 30) return 1.08;
+  return 1;
+}
+
+function getTrafficFactorLabel(minute) {
+  const factor = getLocalTrafficFactor(minute);
+  if (factor >= 1.18) return "朝夕の混雑時間帯として補正";
+  if (factor > 1) return "昼の移動時間として軽く補正";
+  return "通常時間帯として計算";
+}
+
+function getCurrentTimeValue() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatClock(date) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
 function getVehicle() {
@@ -624,6 +794,8 @@ function loadState() {
         startAddress: saved.startAddress || "川崎市川崎区東田町8 川崎区役所",
         endAddress: saved.endAddress || "川崎市川崎区東田町8 川崎区役所",
         startTime: saved.startTime || "08:30",
+        useNowTime: saved.useNowTime !== false,
+        autoRefresh: Boolean(saved.autoRefresh),
         vehicleId: saved.vehicleId || "car1",
         patients: Array.isArray(saved.patients) ? saved.patients : [],
       };
@@ -635,6 +807,8 @@ function loadState() {
     startAddress: "川崎市川崎区東田町8 川崎区役所",
     endAddress: "川崎市川崎区東田町8 川崎区役所",
     startTime: "08:30",
+    useNowTime: true,
+    autoRefresh: false,
     vehicleId: "car1",
     patients: [],
   };
