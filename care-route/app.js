@@ -77,7 +77,16 @@ const knownLocations = [
   { key: "小島新田駅", aliases: ["小島新田"], lat: 35.5347674, lon: 139.7479108 },
   { key: "大師公園", aliases: ["川崎大師公園"], lat: 35.53591, lon: 139.73007 },
   { key: "川崎大師平間寺", aliases: ["平間寺"], lat: 35.5342515, lon: 139.7294416 },
-  { key: "川崎市立川崎病院", aliases: ["市立川崎病院", "川崎病院"], lat: 35.52922, lon: 139.70753 },
+  { key: "川崎市立川崎病院", aliases: ["市立川崎病院", "市立病院", "川崎病院"], lat: 35.52922, lon: 139.70753 },
+  { key: "総合川崎臨港病院", aliases: ["臨港病院", "川崎臨港病院", "臨港", "キノメディッククリニック川崎"], lat: 35.526127, lon: 139.717514 },
+  { key: "AOI国際病院", aliases: ["AＯI国際病院", "ＡＯＩ国際病院", "aoi国際病院", "エーオーアイ国際病院", "AOI健康管理センター"], lat: 35.533916, lon: 139.746048 },
+  { key: "日本鋼管病院", aliases: ["鋼管病院", "こうかん病院", "鋼管"], lat: 35.519604, lon: 139.71225 },
+  { key: "こうかんクリニック", aliases: ["鋼管クリニック", "こうかん"], lat: 35.519604, lon: 139.71225 },
+  { key: "太田総合病院", aliases: ["太田病院", "太田総合", "太田"], lat: 35.528065, lon: 139.695099 },
+  { key: "川崎協同病院", aliases: ["協同病院", "川崎協同", "協同", "川崎医療生活協同組合川崎協同病院"], lat: 35.521923, lon: 139.721725 },
+  { key: "宮川病院", aliases: ["誠医会宮川病院", "宮川"], lat: 35.534908, lon: 139.725006 },
+  { key: "川崎市川崎休日急患診療所", aliases: ["川崎休日急患診療所", "川崎区休日急患診療所", "休日急患診療所", "休日診療"], lat: 35.529778, lon: 139.71022 },
+  { key: "大師診療所", aliases: ["川崎医療生活協同組合大師診療所", "大師診療"], lat: 35.533764, lon: 139.730789 },
   { key: "川崎競馬場", aliases: ["競馬場"], lat: 35.53298, lon: 139.70933 },
 ];
 
@@ -710,28 +719,49 @@ async function geocodeAddress(address, label) {
     const cacheKey = query.toLowerCase();
     if (geocodeCache.has(cacheKey)) return geocodeCache.get(cacheKey);
 
-    const params = new URLSearchParams({
-      format: "jsonv2",
-      limit: "3",
-      countrycodes: "jp",
-      bounded: "1",
-      viewbox: `${KAWASAKI_BOUNDS.west},${KAWASAKI_BOUNDS.north},${KAWASAKI_BOUNDS.east},${KAWASAKI_BOUNDS.south}`,
-      q: query,
-    });
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-      headers: { Accept: "application/json" },
-    });
-    if (!response.ok) throw new Error(`${label}の住所検索に失敗しました。`);
-    const results = await response.json();
-    const result = results.find((item) => isInKawasakiBounds({ lat: Number(item.lat), lon: Number(item.lon) }));
-    if (!result) continue;
-
-    const location = { lat: Number(result.lat), lon: Number(result.lon), label };
+    const location = await geocodeWithNominatim(query, label) || await geocodeWithGsi(query, label);
+    if (!location) continue;
     geocodeCache.set(cacheKey, location);
     return location;
   }
 
-  throw new Error(`${label}の住所が見つかりませんでした。川崎区内の住所、駅名、施設名を入力してください。`);
+  throw new Error(`${label}の住所が見つかりませんでした。川崎区内の住所、駅名、病院名、クリニック名を入力してください。`);
+}
+
+async function geocodeWithNominatim(query, label) {
+  const params = new URLSearchParams({
+    format: "jsonv2",
+    limit: "3",
+    countrycodes: "jp",
+    bounded: "1",
+    viewbox: `${KAWASAKI_BOUNDS.west},${KAWASAKI_BOUNDS.north},${KAWASAKI_BOUNDS.east},${KAWASAKI_BOUNDS.south}`,
+    q: query,
+  });
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`${label}の住所検索に失敗しました。`);
+  const results = await response.json();
+  const result = results.find((item) => isInKawasakiBounds({ lat: Number(item.lat), lon: Number(item.lon) }));
+  return result ? { lat: Number(result.lat), lon: Number(result.lon), label } : null;
+}
+
+async function geocodeWithGsi(query, label) {
+  const response = await fetch(`https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(query)}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) return null;
+  const results = await response.json();
+  const result = results.find((item) => isInKawasakiBounds({
+    lat: Number(item.geometry?.coordinates?.[1]),
+    lon: Number(item.geometry?.coordinates?.[0]),
+  }));
+  if (!result) return null;
+  return {
+    lat: Number(result.geometry.coordinates[1]),
+    lon: Number(result.geometry.coordinates[0]),
+    label,
+  };
 }
 
 async function fetchDrivingRoute(points) {
@@ -996,10 +1026,25 @@ function normalizeLocationKey(value) {
 function buildGeocodeQueries(address) {
   const text = String(address || "").trim();
   const queries = [normalizeKawasakiAddress(text)];
-  if (!text.includes("駅") && !looksLikeStreetAddress(text)) {
+  const hasStationName = text.includes("駅");
+  const hasMedicalName = looksLikeMedicalName(text);
+  if (!hasStationName && !hasMedicalName && !looksLikeStreetAddress(text)) {
     queries.push(normalizeKawasakiAddress(`${text}駅`));
   }
+  if (!looksLikeStreetAddress(text)) {
+    getMedicalSearchNames(text).forEach((candidate) => queries.push(normalizeKawasakiAddress(candidate)));
+  }
   return [...new Set(queries)];
+}
+
+function getMedicalSearchNames(text) {
+  const medicalSuffixes = ["病院", "クリニック", "診療所", "医院"];
+  if (looksLikeMedicalName(text)) return [text];
+  return medicalSuffixes.map((suffix) => `${text}${suffix}`);
+}
+
+function looksLikeMedicalName(text) {
+  return /病院|クリニック|診療所|医院|内科|外科|整形|皮膚科|眼科|耳鼻|歯科|小児科|泌尿器|透析|リハビリ|デイケア|薬局/.test(text);
 }
 
 function looksLikeStreetAddress(text) {
