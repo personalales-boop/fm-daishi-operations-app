@@ -23,6 +23,29 @@
         </div>
       </header>
 
+      <section class="security-panel" id="securityPanel" hidden>
+        <div class="security-copy">
+          <p class="eyebrow">セキュリティ</p>
+          <h2 id="securityTitle">本番セキュリティ確認</h2>
+          <span id="securityStatus">接続状態を確認しています。</span>
+        </div>
+        <form class="login-form" id="loginForm" hidden>
+          <label>
+            <span>利用者</span>
+            <select id="loginUserSelect"></select>
+          </label>
+          <label>
+            <span>PIN</span>
+            <input id="loginPin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN" />
+          </label>
+          <button class="secondary-button" type="submit">ログイン</button>
+        </form>
+        <div class="session-actions" id="sessionActions" hidden>
+          <strong id="sessionUserName">未ログイン</strong>
+          <button class="ghost-button compact" id="logoutButton" type="button">ログアウト</button>
+        </div>
+      </section>
+
       <nav class="app-nav" role="tablist" aria-label="介護送迎メニュー">
         <button class="app-tab active" id="planTab" type="button" role="tab" aria-controls="planPanel" aria-selected="true" data-app-tab="plan">送迎登録</button>
         <button class="app-tab" id="mapTab" type="button" role="tab" aria-controls="mapPanel" aria-selected="false" data-app-tab="map">地図・ルート</button>

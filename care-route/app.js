@@ -1,4 +1,5 @@
 const STORAGE_KEY = "care-route-kawasaki-v1";
+const SESSION_STORAGE_KEY = "care-route-session-token";
 const AUTO_REFRESH_MS = 180000;
 const DEFAULT_BASE_ADDRESS = "川崎市川崎区大師町10-6";
 const KAWASAKI_CENTER = [35.5297, 139.7081];
@@ -91,6 +92,15 @@ const knownLocations = [
 ];
 
 const els = {
+  securityPanel: document.getElementById("securityPanel"),
+  securityTitle: document.getElementById("securityTitle"),
+  securityStatus: document.getElementById("securityStatus"),
+  loginForm: document.getElementById("loginForm"),
+  loginUserSelect: document.getElementById("loginUserSelect"),
+  loginPin: document.getElementById("loginPin"),
+  sessionActions: document.getElementById("sessionActions"),
+  sessionUserName: document.getElementById("sessionUserName"),
+  logoutButton: document.getElementById("logoutButton"),
   appTabs: document.querySelectorAll("[data-app-tab]"),
   appPanels: document.querySelectorAll("[data-app-panel]"),
   startAddress: document.getElementById("startAddress"),
@@ -138,11 +148,15 @@ let lastRouteSnapshot = null;
 let lastGoogleMapsUrl = "";
 let autoRefreshTimer = null;
 let editingRegistryId = null;
+let backendAvailable = false;
+let sessionToken = sessionStorage.getItem(SESSION_STORAGE_KEY) || "";
+let currentUser = null;
+let careRole = "demo";
 const geocodeCache = new Map();
 
 boot();
 
-function boot() {
+async function boot() {
   renderVehicles();
   bindEvents();
   initMap();
@@ -151,6 +165,7 @@ function boot() {
   renderPatients();
   renderRegisteredPatients();
   syncAutoRefresh();
+  await initSecureBackend();
 }
 
 function bindEvents() {
@@ -182,6 +197,8 @@ function bindEvents() {
   els.importPatientsButton.addEventListener("click", registerCurrentPatients);
   els.clearRegistryFormButton.addEventListener("click", resetRegistryForm);
   els.registryCancelEditButton.addEventListener("click", resetRegistryForm);
+  els.loginForm.addEventListener("submit", handleLogin);
+  els.logoutButton.addEventListener("click", logout);
   els.appTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       state.activeAppTab = tab.dataset.appTab;
@@ -230,6 +247,200 @@ function syncInputsFromState() {
   els.endAddress.value = state.endAddress;
   els.startTime.value = state.startTime;
   els.useNowTime.checked = state.useNowTime !== false;
+}
+
+async function initSecureBackend() {
+  try {
+    const config = await apiFetch("/api/care-route/public-config", { auth: false });
+    backendAvailable = Boolean(config.backend);
+    renderSecurityPanel(config.security);
+    renderLoginUsers(config.users || []);
+    if (sessionToken) {
+      await loadSecureSession();
+    } else {
+      lockAppForLogin();
+    }
+  } catch {
+    backendAvailable = false;
+    renderDemoSecurityPanel();
+  }
+}
+
+async function apiFetch(path, options = {}) {
+  const headers = {
+    Accept: "application/json",
+    ...(options.headers || {}),
+  };
+  const hasBody = options.body !== undefined;
+  if (hasBody) headers["Content-Type"] = "application/json";
+  if (options.auth !== false && sessionToken) {
+    headers.Authorization = `Bearer ${sessionToken}`;
+  }
+
+  const response = await fetch(path, {
+    method: options.method || "GET",
+    headers,
+    body: hasBody ? JSON.stringify(options.body) : undefined,
+  });
+  const text = await response.text();
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { error: text };
+    }
+  }
+  if (!response.ok) {
+    throw new Error(data.error || "通信に失敗しました。");
+  }
+  return data;
+}
+
+function getCareRoleLabel(userOrRole) {
+  const role = typeof userOrRole === "string"
+    ? userOrRole
+    : userOrRole?.permission === "admin"
+      ? "admin"
+      : userOrRole?.permission === "viewer"
+        ? "driver"
+        : "dispatcher";
+  if (role === "admin") return "管理者";
+  if (role === "dispatcher") return "配車担当";
+  if (role === "driver") return "ドライバー";
+  return "デモ";
+}
+
+function logCareRouteAction(action, detail, targetType = "care-route", targetId = "") {
+  if (!backendAvailable || !currentUser) return;
+  apiFetch("/api/care-route/audit", {
+    method: "POST",
+    body: { action, detail, targetType, targetId },
+  }).catch(() => {});
+}
+
+function renderSecurityPanel(security) {
+  els.securityPanel.hidden = false;
+  els.securityTitle.textContent = "本番セキュリティ有効";
+  const keyStatus = security?.encryptionKeyConfigured ? "本番暗号キー設定済み" : "開発用暗号キー";
+  els.securityStatus.textContent = `ログイン必須 / 権限管理 / 操作ログ / 暗号化保存 / バックアップ有効（${keyStatus}）`;
+  els.loginForm.hidden = false;
+  els.sessionActions.hidden = true;
+}
+
+function renderDemoSecurityPanel() {
+  els.securityPanel.hidden = false;
+  els.securityTitle.textContent = "デモモード";
+  els.securityStatus.textContent = "この公開ページでは顧客情報はこのブラウザ内だけに保存されます。本番の個人情報入力はサーバー版で行ってください。";
+  els.loginForm.hidden = true;
+  els.sessionActions.hidden = true;
+}
+
+function renderLoginUsers(users) {
+  els.loginUserSelect.innerHTML = users.map((user) => `
+    <option value="${escapeHtml(user.id)}">${escapeHtml(user.name)} / ${escapeHtml(getCareRoleLabel(user))}</option>
+  `).join("");
+}
+
+async function loadSecureSession() {
+  try {
+    const session = await apiFetch("/api/care-route/session");
+    currentUser = session.user;
+    careRole = session.careRole || "dispatcher";
+    els.loginForm.hidden = true;
+    els.sessionActions.hidden = false;
+    els.sessionUserName.textContent = `${currentUser.name} / ${getCareRoleLabel(careRole)}`;
+    await loadSecureCareRouteState();
+    applyCareRolePermissions();
+    setStatus("本番サーバーへログインしました。");
+  } catch {
+    sessionToken = "";
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    currentUser = null;
+    careRole = "demo";
+    lockAppForLogin();
+  }
+}
+
+function lockAppForLogin() {
+  els.loginForm.hidden = false;
+  els.sessionActions.hidden = true;
+  if (backendAvailable) {
+    state.patients = [];
+    state.registeredPatients = [];
+    renderPatients();
+    renderRegisteredPatients();
+    persist();
+  }
+  setAppInteractive(false);
+  setStatus("本番サーバーを利用するにはログインしてください。", true);
+}
+
+function setAppInteractive(enabled) {
+  [
+    els.patientForm,
+    els.registryForm,
+  ].forEach((form) => {
+    form.querySelectorAll("input, select, button").forEach((element) => {
+      element.disabled = !enabled;
+    });
+  });
+  [
+    els.useLocationButton,
+    els.sampleButton,
+    els.clearPatientsButton,
+    els.optimizeButton,
+    els.autoRefreshButton,
+    els.importPatientsButton,
+    els.clearRegistryFormButton,
+  ].forEach((button) => {
+    if (button) button.disabled = !enabled;
+  });
+  if (!enabled) els.googleMapsButton.disabled = true;
+}
+
+async function loadSecureCareRouteState() {
+  const data = await apiFetch("/api/care-route/state");
+  state.registeredPatients = Array.isArray(data.customers) ? data.customers : [];
+  persist();
+  renderRegisteredPatients();
+}
+
+function applyCareRolePermissions() {
+  setAppInteractive(true);
+  const canEditCustomers = ["admin", "dispatcher"].includes(careRole);
+  els.registryForm.querySelectorAll("input, select, button").forEach((element) => {
+    element.disabled = !canEditCustomers;
+  });
+  els.importPatientsButton.disabled = !canEditCustomers;
+  els.clearRegistryFormButton.disabled = !canEditCustomers;
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  const userId = els.loginUserSelect.value;
+  const pin = els.loginPin.value;
+  try {
+    const result = await apiFetch("/api/login", {
+      auth: false,
+      method: "POST",
+      body: { userId, pin },
+    });
+    sessionToken = result.token;
+    sessionStorage.setItem(SESSION_STORAGE_KEY, sessionToken);
+    els.loginPin.value = "";
+    await loadSecureSession();
+  } catch (error) {
+    setStatus(error.message || "ログインに失敗しました。", true);
+  }
+}
+
+function logout() {
+  sessionToken = "";
+  currentUser = null;
+  careRole = "demo";
+  sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  lockAppForLogin();
 }
 
 function renderAppTabs() {
@@ -414,6 +625,7 @@ function renderPatients() {
 
 function renderRegisteredPatients() {
   const registeredPatients = [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  const canEditCustomers = !backendAvailable || ["admin", "dispatcher"].includes(careRole);
 
   if (!registeredPatients.length) {
     els.registryList.innerHTML = `
@@ -443,20 +655,41 @@ function renderRegisteredPatients() {
         </div>
         <div class="card-actions">
           <button class="call-button" type="button" data-call-registry="${escapeHtml(patient.id)}">呼び出す</button>
-          <button class="edit-button" type="button" data-edit-registry="${escapeHtml(patient.id)}">編集</button>
-          <button class="remove-button" type="button" data-delete-registry="${escapeHtml(patient.id)}">削除</button>
+          ${canEditCustomers ? `
+            <button class="edit-button" type="button" data-edit-registry="${escapeHtml(patient.id)}">編集</button>
+            <button class="remove-button" type="button" data-delete-registry="${escapeHtml(patient.id)}">削除</button>
+          ` : ""}
         </div>
       </article>
     `).join("")}
   `;
 }
 
-function saveRegisteredPatient(event) {
+async function saveRegisteredPatient(event) {
   event.preventDefault();
   const registeredPatient = readRegistryForm();
 
   if (!registeredPatient.name || !registeredPatient.address) {
     setStatus("登録する患者さまのお名前と住所を入力してください。", true);
+    return;
+  }
+
+  if (backendAvailable && currentUser) {
+    const wasEditing = Boolean(editingRegistryId);
+    try {
+      const payload = { ...registeredPatient, id: editingRegistryId || "" };
+      const data = await apiFetch("/api/care-route/customer", {
+        method: "POST",
+        body: payload,
+      });
+      state.registeredPatients = Array.isArray(data.customers) ? data.customers : state.registeredPatients;
+      resetRegistryForm();
+      persist();
+      renderRegisteredPatients();
+      setStatus(wasEditing ? "登録済み顧客を更新しました。" : "顧客を登録しました。");
+    } catch (error) {
+      setStatus(error.message || "顧客登録に失敗しました。", true);
+    }
     return;
   }
 
@@ -495,7 +728,7 @@ function handleRegisteredPatientAction(event) {
 
   if (callButton) addRegisteredPatientToRoute(callButton.dataset.callRegistry);
   if (editButton) startEditingRegisteredPatient(editButton.dataset.editRegistry);
-  if (deleteButton) deleteRegisteredPatient(deleteButton.dataset.deleteRegistry);
+  if (deleteButton) void deleteRegisteredPatient(deleteButton.dataset.deleteRegistry);
 }
 
 function addRegisteredPatientToRoute(id) {
@@ -519,6 +752,7 @@ function addRegisteredPatientToRoute(id) {
   persist();
   renderAppTabs();
   renderPatients();
+  logCareRouteAction("顧客呼び出し", `${registeredPatient.name} 様を今日の送迎へ追加しました。`, "customer", registeredPatient.id);
   setStatus(`${registeredPatient.name} を今日の送迎に追加しました。`);
 }
 
@@ -538,8 +772,24 @@ function startEditingRegisteredPatient(id) {
   setStatus(`${registeredPatient.name} の登録内容を編集中です。`);
 }
 
-function deleteRegisteredPatient(id) {
+async function deleteRegisteredPatient(id) {
   const registeredPatient = state.registeredPatients.find((patient) => patient.id === id);
+  if (backendAvailable && currentUser) {
+    try {
+      const data = await apiFetch(`/api/care-route/customer?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      state.registeredPatients = Array.isArray(data.customers) ? data.customers : [];
+      if (editingRegistryId === id) resetRegistryForm();
+      persist();
+      renderRegisteredPatients();
+      setStatus(registeredPatient ? `${registeredPatient.name} を登録一覧から削除しました。` : "登録済み顧客を削除しました。");
+    } catch (error) {
+      setStatus(error.message || "顧客削除に失敗しました。", true);
+    }
+    return;
+  }
+
   state.registeredPatients = state.registeredPatients.filter((patient) => patient.id !== id);
   if (editingRegistryId === id) resetRegistryForm();
   persist();
@@ -547,9 +797,34 @@ function deleteRegisteredPatient(id) {
   setStatus(registeredPatient ? `${registeredPatient.name} を登録一覧から削除しました。` : "登録済み患者さまを削除しました。");
 }
 
-function registerCurrentPatients() {
+async function registerCurrentPatients() {
   if (!state.patients.length) {
     setStatus("今日の送迎に患者さまがいないため、登録できません。", true);
+    return;
+  }
+
+  if (backendAvailable && currentUser) {
+    let savedCount = 0;
+    try {
+      for (const patient of state.patients) {
+        await apiFetch("/api/care-route/customer", {
+          method: "POST",
+          body: {
+            name: patient.name,
+            address: patient.address,
+            passengers: patient.passengers || 1,
+            wheelchair: Boolean(patient.wheelchair),
+            earliest: patient.earliest || "",
+            latest: patient.latest || "",
+          },
+        });
+        savedCount += 1;
+      }
+      await loadSecureCareRouteState();
+      setStatus(`今日の送迎から${savedCount}名をサーバーへ登録しました。`);
+    } catch (error) {
+      setStatus(error.message || "一括登録に失敗しました。", true);
+    }
     return;
   }
 
@@ -614,6 +889,7 @@ async function optimizeRoute(options = {}) {
     state.activeAppTab = "map";
     persist();
     renderAppTabs();
+    logCareRouteAction("ルート作成", `${state.patients.length}名の送迎ルートを作成しました。`, "route", new Date().toISOString());
     setStatus(options.silent ? `自動更新しました。${formatClock(new Date())}` : "ルートを作成しました。");
   } catch (error) {
     setStatus(error.message || "ルート作成に失敗しました。", true);
@@ -1154,6 +1430,20 @@ function loadState() {
 }
 
 function persist() {
+  if (backendAvailable) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      startAddress: state.startAddress,
+      endAddress: state.endAddress,
+      startTime: state.startTime,
+      useNowTime: state.useNowTime,
+      autoRefresh: state.autoRefresh,
+      vehicleId: state.vehicleId,
+      activeAppTab: state.activeAppTab,
+      patients: [],
+      registeredPatients: [],
+    }));
+    return;
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 

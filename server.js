@@ -7,8 +7,18 @@ const PORT = Number(process.env.PORT || 8000);
 const ROOT_DIR = __dirname;
 const DATA_DIR = path.join(ROOT_DIR, "data");
 const STORE_FILE = path.join(DATA_DIR, "store.json");
+const CARE_ROUTE_FILE = path.join(DATA_DIR, "care-route-secure.json");
+const CARE_ROUTE_BACKUP_DIR = path.join(DATA_DIR, "backups");
 const SCHEDULE_MASTER_FILE = path.join(DATA_DIR, "schedule-masters.json");
 const MAX_BODY_BYTES = 1024 * 1024;
+const CARE_ROUTE_KEY_SOURCE = process.env.CARE_ROUTE_DATA_KEY || "fm-daishi-care-route-development-key";
+const CARE_ROUTE_KEY_IS_CONFIGURED = Boolean(process.env.CARE_ROUTE_DATA_KEY);
+const CARE_ROUTE_KEY = crypto.createHash("sha256").update(CARE_ROUTE_KEY_SOURCE).digest();
+const CARE_ROUTE_RETENTION = {
+  deletedCustomerDays: Number(process.env.CARE_ROUTE_DELETED_CUSTOMER_DAYS || 30),
+  routeDraftDays: Number(process.env.CARE_ROUTE_ROUTE_DRAFT_DAYS || 90),
+  auditDays: Number(process.env.CARE_ROUTE_AUDIT_DAYS || 730),
+};
 
 const scheduleMasters = loadScheduleMasters();
 const defaultShiftSlots = createDefaultShiftSlots();
@@ -78,6 +88,7 @@ const mimeTypes = {
 const sessions = new Map();
 const eventClients = new Set();
 let store = loadStore();
+let careRouteStore = loadCareRouteStore();
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -153,6 +164,15 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/care-route/public-config") {
+    sendJson(res, 200, {
+      backend: true,
+      users: loginUsers.map(publicUser),
+      security: getCareRouteSecuritySummary(),
+    });
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/login") {
     const body = await readJsonBody(req);
     const user = loginUsers.find((item) => item.id === body.userId && item.pin === String(body.pin || ""));
@@ -182,6 +202,11 @@ async function handleApi(req, res, url) {
   const session = requireSession(req, url);
   if (!session) {
     sendJson(res, 401, { error: "ログインが必要です。" });
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/care-route/")) {
+    await handleCareRouteApi(req, res, url, session.user);
     return;
   }
 
@@ -543,6 +568,107 @@ async function handleApi(req, res, url) {
   }
 
   sendJson(res, 404, { error: "APIが見つかりません。" });
+}
+
+async function handleCareRouteApi(req, res, url, user) {
+  enforceCareRouteRetention();
+
+  if (req.method === "GET" && url.pathname === "/api/care-route/session") {
+    careRouteAudit(user, "セッション確認", "介護送迎アプリへログインしました。", "session", user.id);
+    writeCareRouteStore(careRouteStore);
+    sendJson(res, 200, {
+      user,
+      careRole: getCareRouteRole(user),
+      security: getCareRouteSecuritySummary(),
+    });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/care-route/state") {
+    careRouteAudit(user, "顧客一覧表示", "顧客登録一覧を表示しました。", "customers", "all");
+    writeCareRouteStore(careRouteStore);
+    sendJson(res, 200, {
+      customers: getCareRouteCustomersForUser(user),
+      auditLog: canManageCareRoute(user) ? careRouteStore.auditLog.slice(0, 120) : [],
+      policy: careRouteStore.policy,
+      careRole: getCareRouteRole(user),
+      security: getCareRouteSecuritySummary(),
+      serverTime: new Date().toISOString(),
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/care-route/customer") {
+    if (!canEditCareRouteCustomers(user)) {
+      sendJson(res, 403, { error: "顧客登録の編集権限がありません。" });
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = upsertCareRouteCustomer(body, user);
+    if (result.error) {
+      sendJson(res, result.status || 400, { error: result.error });
+      return;
+    }
+
+    writeCareRouteStore(careRouteStore);
+    sendJson(res, 200, {
+      customer: result.customer,
+      customers: getCareRouteCustomersForUser(user),
+      auditLog: canManageCareRoute(user) ? careRouteStore.auditLog.slice(0, 120) : [],
+    });
+    return;
+  }
+
+  if (req.method === "DELETE" && url.pathname === "/api/care-route/customer") {
+    if (!canEditCareRouteCustomers(user)) {
+      sendJson(res, 403, { error: "顧客登録の削除権限がありません。" });
+      return;
+    }
+
+    const result = deleteCareRouteCustomer(url.searchParams.get("id"), user);
+    if (result.error) {
+      sendJson(res, result.status || 400, { error: result.error });
+      return;
+    }
+
+    writeCareRouteStore(careRouteStore);
+    sendJson(res, 200, {
+      customers: getCareRouteCustomersForUser(user),
+      auditLog: canManageCareRoute(user) ? careRouteStore.auditLog.slice(0, 120) : [],
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/care-route/audit") {
+    const body = await readJsonBody(req);
+    careRouteAudit(
+      user,
+      String(body.action || "操作"),
+      String(body.detail || "").slice(0, 300),
+      String(body.targetType || "care-route").slice(0, 60),
+      String(body.targetId || "").slice(0, 120),
+    );
+    writeCareRouteStore(careRouteStore);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/care-route/audit") {
+    if (!canManageCareRoute(user)) {
+      sendJson(res, 403, { error: "操作ログは管理者のみ閲覧できます。" });
+      return;
+    }
+    careRouteAudit(user, "操作ログ表示", "介護送迎の操作ログを表示しました。", "audit", "care-route");
+    writeCareRouteStore(careRouteStore);
+    sendJson(res, 200, {
+      auditLog: careRouteStore.auditLog.slice(0, 300),
+      policy: careRouteStore.policy,
+    });
+    return;
+  }
+
+  sendJson(res, 404, { error: "介護送迎APIが見つかりません。" });
 }
 
 function createBoardPost(body, user) {
@@ -1488,6 +1614,185 @@ function writeStore(next) {
   fs.renameSync(tempFile, STORE_FILE);
 }
 
+function loadCareRouteStore() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(CARE_ROUTE_FILE)) {
+    const next = createDefaultCareRouteStore();
+    writeCareRouteStore(next);
+    return next;
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(CARE_ROUTE_FILE, "utf8"));
+    const decrypted = parsed.encrypted ? decryptCareRoutePayload(parsed) : parsed;
+    return normalizeCareRouteStore(decrypted);
+  } catch (error) {
+    const backup = `${CARE_ROUTE_FILE}.broken-${Date.now()}`;
+    fs.copyFileSync(CARE_ROUTE_FILE, backup);
+    const next = createDefaultCareRouteStore();
+    writeCareRouteStore(next);
+    return next;
+  }
+}
+
+function createDefaultCareRouteStore() {
+  const now = new Date().toISOString();
+  return {
+    version: 1,
+    customers: [],
+    deletedCustomers: [],
+    routeDrafts: [],
+    auditLog: [{
+      id: crypto.randomUUID(),
+      actorId: "system",
+      actorName: "システム",
+      careRole: "system",
+      action: "初期化",
+      detail: "介護送迎用の暗号化データストアを作成しました。",
+      targetType: "store",
+      targetId: "care-route",
+      createdAt: now,
+    }],
+    policy: createCareRoutePolicy(),
+    updatedAt: now,
+  };
+}
+
+function normalizeCareRouteStore(value) {
+  const next = {
+    version: Number(value.version || 1),
+    customers: Array.isArray(value.customers) ? value.customers.map(normalizeCareRouteCustomer).filter(Boolean) : [],
+    deletedCustomers: Array.isArray(value.deletedCustomers) ? value.deletedCustomers : [],
+    routeDrafts: Array.isArray(value.routeDrafts) ? value.routeDrafts : [],
+    auditLog: Array.isArray(value.auditLog) ? value.auditLog : [],
+    policy: { ...createCareRoutePolicy(), ...(value.policy || {}) },
+    updatedAt: value.updatedAt || new Date().toISOString(),
+  };
+  return next;
+}
+
+function createCareRoutePolicy() {
+  return {
+    retention: { ...CARE_ROUTE_RETENTION },
+    accessControl: "admin/dispatcher can edit customers; driver is read-restricted",
+    storage: "AES-256-GCM encrypted file store",
+    backup: "daily encrypted backup copy on write",
+    encryptionKeyConfigured: CARE_ROUTE_KEY_IS_CONFIGURED,
+  };
+}
+
+function normalizeCareRouteCustomer(customer) {
+  if (!customer || !customer.id || !customer.name || !customer.address) return null;
+  return {
+    id: String(customer.id),
+    name: String(customer.name || "").trim(),
+    address: String(customer.address || "").trim(),
+    passengers: Math.max(1, Number(customer.passengers || 1)),
+    wheelchair: Boolean(customer.wheelchair),
+    earliest: String(customer.earliest || ""),
+    latest: String(customer.latest || ""),
+    createdAt: customer.createdAt || new Date().toISOString(),
+    createdBy: String(customer.createdBy || ""),
+    createdByName: String(customer.createdByName || ""),
+    updatedAt: customer.updatedAt || new Date().toISOString(),
+    updatedBy: String(customer.updatedBy || ""),
+    updatedByName: String(customer.updatedByName || ""),
+    lastUsedAt: customer.lastUsedAt || null,
+  };
+}
+
+function writeCareRouteStore(next) {
+  enforceCareRouteRetention(false, next);
+  next.updatedAt = new Date().toISOString();
+  next.version = Number(next.version || 1) + 1;
+  next.policy = { ...createCareRoutePolicy(), ...(next.policy || {}) };
+  const encrypted = encryptCareRoutePayload(next);
+  const tempFile = `${CARE_ROUTE_FILE}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify(encrypted, null, 2));
+  fs.renameSync(tempFile, CARE_ROUTE_FILE);
+  writeCareRouteBackup(encrypted);
+}
+
+function encryptCareRoutePayload(payload) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", CARE_ROUTE_KEY, iv);
+  const encrypted = Buffer.concat([
+    cipher.update(JSON.stringify(payload), "utf8"),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
+  return {
+    encrypted: true,
+    version: 1,
+    algorithm: "aes-256-gcm",
+    keyConfigured: CARE_ROUTE_KEY_IS_CONFIGURED,
+    iv: iv.toString("base64"),
+    tag: tag.toString("base64"),
+    data: encrypted.toString("base64"),
+    updatedAt: payload.updatedAt,
+  };
+}
+
+function decryptCareRoutePayload(payload) {
+  const decipher = crypto.createDecipheriv(
+    "aes-256-gcm",
+    CARE_ROUTE_KEY,
+    Buffer.from(payload.iv, "base64"),
+  );
+  decipher.setAuthTag(Buffer.from(payload.tag, "base64"));
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(payload.data, "base64")),
+    decipher.final(),
+  ]);
+  return JSON.parse(decrypted.toString("utf8"));
+}
+
+function writeCareRouteBackup(encryptedPayload) {
+  fs.mkdirSync(CARE_ROUTE_BACKUP_DIR, { recursive: true });
+  const dateKey = formatISO(new Date());
+  const backupFile = path.join(CARE_ROUTE_BACKUP_DIR, `care-route-${dateKey}.enc.json`);
+  fs.writeFileSync(backupFile, JSON.stringify(encryptedPayload, null, 2));
+}
+
+function enforceCareRouteRetention(shouldAudit = true, targetStore = careRouteStore) {
+  if (!targetStore) return;
+  const now = Date.now();
+  const beforeDeleted = targetStore.deletedCustomers.length;
+  const beforeRoutes = targetStore.routeDrafts.length;
+  const beforeAudit = targetStore.auditLog.length;
+
+  targetStore.deletedCustomers = targetStore.deletedCustomers.filter((item) => {
+    return !isOlderThan(item.deletedAt, CARE_ROUTE_RETENTION.deletedCustomerDays, now);
+  });
+  targetStore.routeDrafts = targetStore.routeDrafts.filter((item) => {
+    return !isOlderThan(item.updatedAt || item.createdAt, CARE_ROUTE_RETENTION.routeDraftDays, now);
+  });
+  targetStore.auditLog = targetStore.auditLog.filter((item) => {
+    return !isOlderThan(item.createdAt, CARE_ROUTE_RETENTION.auditDays, now);
+  }).slice(0, 1000);
+
+  if (shouldAudit && (beforeDeleted !== targetStore.deletedCustomers.length || beforeRoutes !== targetStore.routeDrafts.length || beforeAudit !== targetStore.auditLog.length)) {
+    targetStore.auditLog.unshift({
+      id: crypto.randomUUID(),
+      actorId: "system",
+      actorName: "システム",
+      careRole: "system",
+      action: "保持期限処理",
+      detail: "期限切れの介護送迎データを削除しました。",
+      targetType: "retention",
+      targetId: "care-route",
+      createdAt: new Date().toISOString(),
+    });
+  }
+}
+
+function isOlderThan(value, days, now = Date.now()) {
+  if (!value || !Number.isFinite(Number(days)) || Number(days) <= 0) return false;
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return false;
+  return now - timestamp > Number(days) * 86400000;
+}
+
 function ensureMonth(targetStore, month) {
   const normalized = normalizeMonth(month);
   if (!targetStore.schedules.draft[normalized]) {
@@ -2015,6 +2320,149 @@ function addAudit(user, action, detail) {
     createdAt: new Date().toISOString(),
   });
   store.auditLog = store.auditLog.slice(0, 120);
+}
+
+function upsertCareRouteCustomer(body, user) {
+  const incoming = normalizeCareRouteCustomerInput(body);
+  if (incoming.error) return incoming;
+  const { id: incomingId, ...fields } = incoming;
+
+  const existing = incomingId ? careRouteStore.customers.find((customer) => customer.id === incomingId) : null;
+  const duplicate = careRouteStore.customers.find((customer) => {
+    return customer.id !== incomingId && sameCareRouteCustomer(customer, incoming);
+  });
+  const target = existing || duplicate || {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    createdBy: user.id,
+    createdByName: user.name,
+  };
+
+  Object.assign(target, fields, {
+    updatedAt: new Date().toISOString(),
+    updatedBy: user.id,
+    updatedByName: user.name,
+  });
+
+  if (!existing && !duplicate) careRouteStore.customers.unshift(target);
+  careRouteStore.customers.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ja", { numeric: true }));
+  careRouteAudit(
+    user,
+    existing || duplicate ? "顧客更新" : "顧客登録",
+    `${target.name} 様の顧客情報を保存しました。`,
+    "customer",
+    target.id,
+  );
+  return { customer: target };
+}
+
+function normalizeCareRouteCustomerInput(body) {
+  const id = String(body.id || "").trim();
+  const name = String(body.name || "").trim();
+  const address = String(body.address || "").trim();
+  const passengers = Math.max(1, Math.min(8, Number(body.passengers || 1)));
+  const earliest = String(body.earliest || "").trim();
+  const latest = String(body.latest || "").trim();
+
+  if (!name) return { error: "顧客名を入力してください。" };
+  if (!address) return { error: "住所・施設名を入力してください。" };
+  if (!Number.isFinite(passengers)) return { error: "人数が正しくありません。" };
+  if (earliest && !isValidTime(earliest)) return { error: "何時以降の形式が正しくありません。" };
+  if (latest && !isValidTime(latest)) return { error: "何時までの形式が正しくありません。" };
+  if (earliest && latest && timeValueToMinutes(earliest) > timeValueToMinutes(latest)) {
+    return { error: "時間制約の開始時刻が終了時刻より後です。" };
+  }
+
+  return {
+    id,
+    name,
+    address,
+    passengers,
+    wheelchair: Boolean(body.wheelchair),
+    earliest,
+    latest,
+  };
+}
+
+function deleteCareRouteCustomer(id, user) {
+  const customerId = String(id || "").trim();
+  const customer = careRouteStore.customers.find((item) => item.id === customerId);
+  if (!customer) return { status: 404, error: "対象の顧客が見つかりません。" };
+
+  careRouteStore.customers = careRouteStore.customers.filter((item) => item.id !== customerId);
+  careRouteStore.deletedCustomers.unshift({
+    ...customer,
+    deletedAt: new Date().toISOString(),
+    deletedBy: user.id,
+    deletedByName: user.name,
+  });
+  careRouteAudit(user, "顧客削除", `${customer.name} 様の顧客情報を削除しました。`, "customer", customer.id);
+  return { ok: true };
+}
+
+function getCareRouteCustomersForUser(user) {
+  const role = getCareRouteRole(user);
+  if (role === "driver") return [];
+  return careRouteStore.customers.map((customer) => ({ ...customer }));
+}
+
+function getCareRouteRole(user) {
+  if (isAdmin(user)) return "admin";
+  if (user.permission === "viewer") return "driver";
+  return "dispatcher";
+}
+
+function canEditCareRouteCustomers(user) {
+  return ["admin", "dispatcher"].includes(getCareRouteRole(user));
+}
+
+function canManageCareRoute(user) {
+  return getCareRouteRole(user) === "admin";
+}
+
+function careRouteAudit(user, action, detail, targetType, targetId) {
+  careRouteStore.auditLog.unshift({
+    id: crypto.randomUUID(),
+    actorId: user.id,
+    actorName: user.name,
+    careRole: getCareRouteRole(user),
+    action: String(action || "操作").slice(0, 80),
+    detail: String(detail || "").slice(0, 300),
+    targetType: String(targetType || "care-route").slice(0, 60),
+    targetId: String(targetId || "").slice(0, 120),
+    createdAt: new Date().toISOString(),
+  });
+  careRouteStore.auditLog = careRouteStore.auditLog.slice(0, 1000);
+}
+
+function getCareRouteSecuritySummary() {
+  return {
+    authRequired: true,
+    roleBasedAccess: true,
+    auditLog: true,
+    encryptedAtRest: true,
+    encryptionKeyConfigured: CARE_ROUTE_KEY_IS_CONFIGURED,
+    retention: { ...CARE_ROUTE_RETENTION },
+    backup: true,
+  };
+}
+
+function sameCareRouteCustomer(a, b) {
+  return normalizeDataKey(a.name) === normalizeDataKey(b.name) &&
+    normalizeDataKey(a.address) === normalizeDataKey(b.address);
+}
+
+function normalizeDataKey(value) {
+  return String(value || "").normalize("NFKC").replace(/\s+/g, "").toLowerCase();
+}
+
+function isValidTime(value) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || ""));
+}
+
+function timeValueToMinutes(value) {
+  const [hours, minutes] = String(value || "00:00").split(":").map(Number);
+  return hours * 60 + minutes;
 }
 
 async function serveStatic(res, requestedPath) {

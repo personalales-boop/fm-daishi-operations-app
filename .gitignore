@@ -2,3 +2,5 @@
 node_modules/
 npm-debug.log*
 *.local
+data/care-route-secure.json
+data/backups/
