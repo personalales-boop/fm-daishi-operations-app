@@ -1,5 +1,6 @@
 const STORAGE_KEY = "care-route-kawasaki-v1";
 const AUTO_REFRESH_MS = 180000;
+const DEFAULT_BASE_ADDRESS = "川崎市川崎区大師町10-6";
 const KAWASAKI_CENTER = [35.5297, 139.7081];
 const KAWASAKI_BOUNDS = {
   south: 35.485,
@@ -55,6 +56,8 @@ const samplePatients = [
 ];
 
 const knownLocations = [
+  { key: "大師町10-6", lat: 35.5338309, lon: 139.7306612 },
+  { key: "大師町10番6", lat: 35.5338309, lon: 139.7306612 },
   { key: "川崎区役所", lat: 35.53082, lon: 139.70306 },
   { key: "東田町8", lat: 35.53082, lon: 139.70306 },
   { key: "大師公園", lat: 35.53591, lon: 139.73007 },
@@ -214,8 +217,8 @@ function removePatient(event) {
 }
 
 function useSamplePatients() {
-  state.startAddress = "川崎市川崎区東田町8 川崎区役所";
-  state.endAddress = "川崎市川崎区東田町8 川崎区役所";
+  state.startAddress = DEFAULT_BASE_ADDRESS;
+  state.endAddress = DEFAULT_BASE_ADDRESS;
   state.startTime = state.useNowTime !== false ? getCurrentTimeValue() : "08:45";
   state.vehicleId = "car2";
   state.patients = buildCurrentSamplePatients();
@@ -791,8 +794,8 @@ function loadState() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (saved) {
       return {
-        startAddress: saved.startAddress || "川崎市川崎区東田町8 川崎区役所",
-        endAddress: saved.endAddress || "川崎市川崎区東田町8 川崎区役所",
+        startAddress: saved.startAddress || DEFAULT_BASE_ADDRESS,
+        endAddress: saved.endAddress || DEFAULT_BASE_ADDRESS,
         startTime: saved.startTime || "08:30",
         useNowTime: saved.useNowTime !== false,
         autoRefresh: Boolean(saved.autoRefresh),
@@ -804,8 +807,8 @@ function loadState() {
     localStorage.removeItem(STORAGE_KEY);
   }
   return {
-    startAddress: "川崎市川崎区東田町8 川崎区役所",
-    endAddress: "川崎市川崎区東田町8 川崎区役所",
+    startAddress: DEFAULT_BASE_ADDRESS,
+    endAddress: DEFAULT_BASE_ADDRESS,
     startTime: "08:30",
     useNowTime: true,
     autoRefresh: false,
