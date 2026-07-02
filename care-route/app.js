@@ -1,5 +1,6 @@
 const STORAGE_KEY = "care-route-kawasaki-v1";
 const SESSION_STORAGE_KEY = "care-route-session-token";
+const DEMO_SESSION_STORAGE_KEY = "care-route-demo-session";
 const AUTO_REFRESH_MS = 180000;
 const DEFAULT_BASE_ADDRESS = "川崎市川崎区大師町10-6";
 const KAWASAKI_CENTER = [35.5297, 139.7081];
@@ -15,6 +16,12 @@ const vehicles = [
   { id: "car2", name: "2号車", capacity: 4, wheelchair: true, note: "車椅子対応 / 4名まで" },
   { id: "car3", name: "3号車", capacity: 8, wheelchair: false, note: "定員8名 / 多人数向け" },
   { id: "car4", name: "4号車", capacity: 5, wheelchair: false, note: "定員5名 / 中型" },
+];
+
+const demoLoginUsers = [
+  { id: "demo_admin", name: "デモ管理者", permission: "admin", pin: "0000", color: "#0b72d9" },
+  { id: "demo_dispatcher", name: "デモ配車担当", permission: "staff", pin: "1111", color: "#098a65" },
+  { id: "demo_driver", name: "デモドライバー", permission: "viewer", pin: "2222", color: "#6f7b88" },
 ];
 
 const samplePatients = [
@@ -298,17 +305,18 @@ async function apiFetch(path, options = {}) {
 }
 
 function getCareRoleLabel(userOrRole) {
-  const role = typeof userOrRole === "string"
-    ? userOrRole
-    : userOrRole?.permission === "admin"
-      ? "admin"
-      : userOrRole?.permission === "viewer"
-        ? "driver"
-        : "dispatcher";
+  const role = typeof userOrRole === "string" ? userOrRole : getCareRoleFromUser(userOrRole);
   if (role === "admin") return "管理者";
   if (role === "dispatcher") return "配車担当";
   if (role === "driver") return "ドライバー";
   return "デモ";
+}
+
+function getCareRoleFromUser(user) {
+  if (user?.permission === "admin") return "admin";
+  if (user?.permission === "viewer") return "driver";
+  if (user?.permission === "staff") return "dispatcher";
+  return "demo";
 }
 
 function logCareRouteAction(action, detail, targetType = "care-route", targetId = "") {
@@ -330,10 +338,15 @@ function renderSecurityPanel(security) {
 
 function renderDemoSecurityPanel() {
   els.securityPanel.hidden = false;
-  els.securityTitle.textContent = "デモモード";
-  els.securityStatus.textContent = "この公開ページでは顧客情報はこのブラウザ内だけに保存されます。本番の個人情報入力はサーバー版で行ってください。";
-  els.loginForm.hidden = true;
-  els.sessionActions.hidden = true;
+  els.securityTitle.textContent = "公開デモログイン";
+  els.securityStatus.textContent = "確認用URLでもログインが必要です。本番の個人情報入力はNode.jsサーバー版で行ってください。";
+  renderLoginUsers(demoLoginUsers);
+  const demoUser = demoLoginUsers.find((user) => user.id === sessionStorage.getItem(DEMO_SESSION_STORAGE_KEY));
+  if (demoUser) {
+    applyDemoSession(demoUser);
+    return;
+  }
+  lockAppForLogin("公開デモを利用するにはログインしてください。");
 }
 
 function renderLoginUsers(users) {
@@ -362,10 +375,10 @@ async function loadSecureSession() {
   }
 }
 
-function lockAppForLogin() {
+function lockAppForLogin(message = backendAvailable ? "本番サーバーを利用するにはログインしてください。" : "公開デモを利用するにはログインしてください。") {
   els.loginForm.hidden = false;
   els.sessionActions.hidden = true;
-  if (backendAvailable) {
+  if (backendAvailable || !currentUser) {
     state.patients = [];
     state.registeredPatients = [];
     renderPatients();
@@ -373,7 +386,7 @@ function lockAppForLogin() {
     persist();
   }
   setAppInteractive(false);
-  setStatus("本番サーバーを利用するにはログインしてください。", true);
+  setStatus(message, true);
 }
 
 function setAppInteractive(enabled) {
@@ -416,10 +429,39 @@ function applyCareRolePermissions() {
   els.clearRegistryFormButton.disabled = !canEditCustomers;
 }
 
+function applyDemoSession(user) {
+  currentUser = {
+    id: user.id,
+    name: user.name,
+    permission: user.permission,
+    color: user.color,
+  };
+  careRole = getCareRoleFromUser(user);
+  els.loginForm.hidden = true;
+  els.sessionActions.hidden = false;
+  els.sessionUserName.textContent = `${currentUser.name} / ${getCareRoleLabel(careRole)}`;
+  applyCareRolePermissions();
+  renderRegisteredPatients();
+  setStatus("公開デモへログインしました。");
+}
+
 async function handleLogin(event) {
   event.preventDefault();
   const userId = els.loginUserSelect.value;
   const pin = els.loginPin.value;
+
+  if (!backendAvailable) {
+    const demoUser = demoLoginUsers.find((user) => user.id === userId && user.pin === String(pin || ""));
+    if (!demoUser) {
+      setStatus("PINが正しくありません。", true);
+      return;
+    }
+    sessionStorage.setItem(DEMO_SESSION_STORAGE_KEY, demoUser.id);
+    els.loginPin.value = "";
+    applyDemoSession(demoUser);
+    return;
+  }
+
   try {
     const result = await apiFetch("/api/login", {
       auth: false,
@@ -440,7 +482,8 @@ function logout() {
   currentUser = null;
   careRole = "demo";
   sessionStorage.removeItem(SESSION_STORAGE_KEY);
-  lockAppForLogin();
+  sessionStorage.removeItem(DEMO_SESSION_STORAGE_KEY);
+  lockAppForLogin(backendAvailable ? "本番サーバーを利用するにはログインしてください。" : "公開デモを利用するにはログインしてください。");
 }
 
 function renderAppTabs() {
@@ -624,8 +667,10 @@ function renderPatients() {
 }
 
 function renderRegisteredPatients() {
-  const registeredPatients = [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja"));
-  const canEditCustomers = !backendAvailable || ["admin", "dispatcher"].includes(careRole);
+  const canEditCustomers = careRole !== "driver" && (!backendAvailable || ["admin", "dispatcher"].includes(careRole));
+  const registeredPatients = careRole === "driver"
+    ? []
+    : [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja"));
 
   if (!registeredPatients.length) {
     els.registryList.innerHTML = `
