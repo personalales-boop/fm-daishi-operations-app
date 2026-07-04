@@ -1,9 +1,10 @@
 const STORAGE_KEY = "care-route-kawasaki-v1";
 const SESSION_STORAGE_KEY = "care-route-session-token";
-const DEMO_SESSION_STORAGE_KEY = "care-route-demo-session";
+const REVIEW_SESSION_STORAGE_KEY = "care-route-review-session";
 const AUTO_REFRESH_MS = 180000;
 const DEFAULT_BASE_ADDRESS = "川崎市川崎区大師町10-6";
-const KAWASAKI_CENTER = [35.5297, 139.7081];
+const BASE_LOCATION = { lat: 35.5338309, lon: 139.7306612 };
+const INITIAL_MAP_ZOOM = 16;
 const KAWASAKI_BOUNDS = {
   south: 35.485,
   west: 139.665,
@@ -18,49 +19,10 @@ const vehicles = [
   { id: "car4", name: "4号車", capacity: 5, wheelchair: false, wheelchairCapacity: 0, note: "座席5名 / 車いす不可" },
 ];
 
-const demoLoginUsers = [
-  { id: "demo_admin", name: "デモ管理者", permission: "admin", pin: "0000", color: "#0b72d9" },
-  { id: "demo_dispatcher", name: "デモ配車担当", permission: "staff", pin: "1111", color: "#098a65" },
-  { id: "demo_driver", name: "デモドライバー", permission: "viewer", pin: "2222", color: "#6f7b88" },
-];
-
-const samplePatients = [
-  {
-    id: "sample-daishi",
-    name: "大師 太郎様",
-    address: "川崎市川崎区大師町4 大師公園",
-    passengers: 1,
-    wheelchair: false,
-    earliest: "09:00",
-    latest: "09:45",
-  },
-  {
-    id: "sample-oda",
-    name: "小田 花子様",
-    address: "川崎市川崎区小田栄2 小田栄駅",
-    passengers: 1,
-    wheelchair: false,
-    earliest: "09:20",
-    latest: "10:20",
-  },
-  {
-    id: "sample-minato",
-    name: "港町 一郎様",
-    address: "川崎市川崎区港町12 港町駅",
-    passengers: 1,
-    wheelchair: true,
-    earliest: "09:40",
-    latest: "10:40",
-  },
-  {
-    id: "sample-hama",
-    name: "浜川崎 幸子様",
-    address: "川崎市川崎区鋼管通5 浜川崎駅",
-    passengers: 1,
-    wheelchair: false,
-    earliest: "10:00",
-    latest: "11:00",
-  },
+const finalReviewLoginUsers = [
+  { id: "review_admin", name: "管理者", permission: "admin", pin: "0000", color: "#0b72d9" },
+  { id: "review_dispatcher", name: "配車担当", permission: "staff", pin: "1111", color: "#098a65" },
+  { id: "review_driver", name: "ドライバー", permission: "viewer", pin: "2222", color: "#6f7b88" },
 ];
 
 const knownLocations = [
@@ -124,7 +86,6 @@ const els = {
   patientEarliest: document.getElementById("patientEarliest"),
   patientLatest: document.getElementById("patientLatest"),
   patientWheelchair: document.getElementById("patientWheelchair"),
-  sampleButton: document.getElementById("sampleButton"),
   clearPatientsButton: document.getElementById("clearPatientsButton"),
   patientList: document.getElementById("patientList"),
   registryForm: document.getElementById("registryForm"),
@@ -166,7 +127,7 @@ let editingRegistryId = null;
 let backendAvailable = false;
 let sessionToken = sessionStorage.getItem(SESSION_STORAGE_KEY) || "";
 let currentUser = null;
-let careRole = "demo";
+let careRole = "review";
 let pendingBulkPatients = [];
 const geocodeCache = new Map();
 
@@ -200,6 +161,9 @@ function bindEvents() {
       state.endAddress = els.endAddress.value.trim();
       state.startTime = els.startTime.value || "08:30";
       persist();
+      if (!lastRouteBounds && state.activeAppTab === "map") {
+        focusStartAddressOnMap();
+      }
     });
   });
   els.useNowTime.addEventListener("change", () => {
@@ -230,7 +194,6 @@ function bindEvents() {
       renderAppTabs();
     });
   });
-  els.sampleButton.addEventListener("click", useSamplePatients);
   els.clearPatientsButton.addEventListener("click", clearPatients);
   els.patientList.addEventListener("click", removePatient);
   els.useLocationButton.addEventListener("click", useCurrentLocationAsStart);
@@ -245,7 +208,7 @@ function initMap() {
   map = L.map("map", {
     zoomControl: true,
     scrollWheelZoom: true,
-  }).setView(KAWASAKI_CENTER, 13);
+  }).setView([BASE_LOCATION.lat, BASE_LOCATION.lon], INITIAL_MAP_ZOOM);
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -254,6 +217,7 @@ function initMap() {
 
   markerLayer = L.layerGroup().addTo(map);
   routeLayer = L.layerGroup().addTo(map);
+  focusStartAddressOnMap();
 }
 
 function renderVehicles() {
@@ -286,7 +250,7 @@ async function initSecureBackend() {
     }
   } catch {
     backendAvailable = false;
-    renderDemoSecurityPanel();
+    renderFinalReviewSecurityPanel();
   }
 }
 
@@ -326,14 +290,14 @@ function getCareRoleLabel(userOrRole) {
   if (role === "admin") return "管理者";
   if (role === "dispatcher") return "配車担当";
   if (role === "driver") return "ドライバー";
-  return "デモ";
+  return "確認";
 }
 
 function getCareRoleFromUser(user) {
   if (user?.permission === "admin") return "admin";
   if (user?.permission === "viewer") return "driver";
   if (user?.permission === "staff") return "dispatcher";
-  return "demo";
+  return "review";
 }
 
 function logCareRouteAction(action, detail, targetType = "care-route", targetId = "") {
@@ -346,37 +310,37 @@ function logCareRouteAction(action, detail, targetType = "care-route", targetId 
 
 function renderSecurityPanel(security) {
   els.securityPanel.hidden = false;
-  els.securityTitle.textContent = "本番セキュリティ有効";
-  const keyStatus = security?.encryptionKeyConfigured ? "本番暗号キー設定済み" : "開発用暗号キー";
-  const modeStatus = security?.production ? "本番モード" : "開発・検証モード";
+  els.securityTitle.textContent = security?.production ? "本番ログイン" : "本番確認ログイン";
+  const keyStatus = security?.encryptionKeyConfigured ? "暗号キー設定済み" : "暗号キー未設定";
+  const modeStatus = security?.production ? "本番運用モード" : "本番確認モード";
   const ttlText = security?.sessionTtlHours ? `セッション${security.sessionTtlHours}時間` : "期限付きセッション";
   els.securityStatus.textContent = `${modeStatus} / ログイン必須 / 権限管理 / 操作ログ / 暗号化保存 / ${ttlText}（${keyStatus}）`;
   els.securityChecklist.innerHTML = security?.production && security?.encryptionKeyConfigured ? `
     <div class="security-item"><span class="security-mark">OK</span><span>本番データ入力可: 本番暗号キー、ログイン制限、権限管理、暗号化保存、バックアップが有効です。</span></div>
     <div class="security-item"><span class="security-mark">OK</span><span>画面を閉じると、ルート作成中の患者名・住所はブラウザ保存に残さない設計です。</span></div>
   ` : `
-    <div class="security-item warning"><span class="security-mark">!</span><span>検証用設定です。本番の氏名・住所を入れる前に NODE_ENV=production、CARE_ROUTE_DATA_KEY、LOGIN_PINS を設定してください。</span></div>
+    <div class="security-item warning"><span class="security-mark">!</span><span>本番データ入力前に NODE_ENV=production、CARE_ROUTE_DATA_KEY、LOGIN_PINS を設定してください。</span></div>
     <div class="security-item"><span class="security-mark">OK</span><span>ログイン、権限管理、暗号化保存、バックアップの動作確認はできます。</span></div>
   `;
   els.loginForm.hidden = false;
   els.sessionActions.hidden = true;
 }
 
-function renderDemoSecurityPanel() {
+function renderFinalReviewSecurityPanel() {
   els.securityPanel.hidden = false;
-  els.securityTitle.textContent = "公開デモログイン";
-  els.securityStatus.textContent = "確認用URLでもログインが必要です。本番の個人情報入力はNode.jsサーバー版で行ってください。";
+  els.securityTitle.textContent = "本番確認ログイン";
+  els.securityStatus.textContent = "ログイン後、送迎登録・顧客登録・ルート作成を確認できます。";
   els.securityChecklist.innerHTML = `
-    <div class="security-item warning"><span class="security-mark">!</span><span>この公開URLは納品確認用です。本名・実住所は入れず、架空データで確認してください。</span></div>
-    <div class="security-item"><span class="security-mark">OK</span><span>本番運用ではNode.jsサーバー版に切り替え、ログイン、権限、暗号化保存、バックアップを使います。</span></div>
+    <div class="security-item"><span class="security-mark">OK</span><span>利用者名、住所、時間制約、車いす利用の登録画面を本番運用の項目に合わせています。</span></div>
+    <div class="security-item"><span class="security-mark">OK</span><span>本番サーバー接続時はログイン、権限、暗号化保存、バックアップで運用します。</span></div>
   `;
-  renderLoginUsers(demoLoginUsers);
-  const demoUser = demoLoginUsers.find((user) => user.id === sessionStorage.getItem(DEMO_SESSION_STORAGE_KEY));
-  if (demoUser) {
-    applyDemoSession(demoUser);
+  renderLoginUsers(finalReviewLoginUsers);
+  const reviewUser = finalReviewLoginUsers.find((user) => user.id === sessionStorage.getItem(REVIEW_SESSION_STORAGE_KEY));
+  if (reviewUser) {
+    applyLocalSession(reviewUser);
     return;
   }
-  lockAppForLogin("公開デモを利用するにはログインしてください。");
+  lockAppForLogin("ログインしてください。");
 }
 
 function renderLoginUsers(users) {
@@ -395,17 +359,17 @@ async function loadSecureSession() {
     els.sessionUserName.textContent = `${currentUser.name} / ${getCareRoleLabel(careRole)}`;
     await loadSecureCareRouteState();
     applyCareRolePermissions();
-    setStatus("本番サーバーへログインしました。");
+    setStatus("ログインしました。");
   } catch {
     sessionToken = "";
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
     currentUser = null;
-    careRole = "demo";
+    careRole = "review";
     lockAppForLogin();
   }
 }
 
-function lockAppForLogin(message = backendAvailable ? "本番サーバーを利用するにはログインしてください。" : "公開デモを利用するにはログインしてください。") {
+function lockAppForLogin(message = "ログインしてください。") {
   els.loginForm.hidden = false;
   els.sessionActions.hidden = true;
   if (backendAvailable || !currentUser) {
@@ -430,7 +394,6 @@ function setAppInteractive(enabled) {
   });
   [
     els.useLocationButton,
-    els.sampleButton,
     els.clearPatientsButton,
     els.optimizeButton,
     els.autoRefreshButton,
@@ -472,7 +435,7 @@ function canEditCustomers() {
   return careRole !== "driver" && (!backendAvailable || ["admin", "dispatcher"].includes(careRole));
 }
 
-function applyDemoSession(user) {
+function applyLocalSession(user) {
   currentUser = {
     id: user.id,
     name: user.name,
@@ -485,7 +448,7 @@ function applyDemoSession(user) {
   els.sessionUserName.textContent = `${currentUser.name} / ${getCareRoleLabel(careRole)}`;
   applyCareRolePermissions();
   renderRegisteredPatients();
-  setStatus("公開デモへログインしました。");
+  setStatus("ログインしました。");
 }
 
 async function handleLogin(event) {
@@ -494,14 +457,14 @@ async function handleLogin(event) {
   const pin = els.loginPin.value;
 
   if (!backendAvailable) {
-    const demoUser = demoLoginUsers.find((user) => user.id === userId && user.pin === String(pin || ""));
-    if (!demoUser) {
+    const reviewUser = finalReviewLoginUsers.find((user) => user.id === userId && user.pin === String(pin || ""));
+    if (!reviewUser) {
       setStatus("PINが正しくありません。", true);
       return;
     }
-    sessionStorage.setItem(DEMO_SESSION_STORAGE_KEY, demoUser.id);
+    sessionStorage.setItem(REVIEW_SESSION_STORAGE_KEY, reviewUser.id);
     els.loginPin.value = "";
-    applyDemoSession(demoUser);
+    applyLocalSession(reviewUser);
     return;
   }
 
@@ -526,10 +489,10 @@ function logout() {
   }
   sessionToken = "";
   currentUser = null;
-  careRole = "demo";
+  careRole = "review";
   sessionStorage.removeItem(SESSION_STORAGE_KEY);
-  sessionStorage.removeItem(DEMO_SESSION_STORAGE_KEY);
-  lockAppForLogin(backendAvailable ? "本番サーバーを利用するにはログインしてください。" : "公開デモを利用するにはログインしてください。");
+  sessionStorage.removeItem(REVIEW_SESSION_STORAGE_KEY);
+  lockAppForLogin("ログインしてください。");
 }
 
 function renderAppTabs() {
@@ -587,32 +550,6 @@ function removePatient(event) {
   persist();
   renderPatients();
   setStatus("患者様を削除しました。");
-}
-
-function useSamplePatients() {
-  state.startAddress = DEFAULT_BASE_ADDRESS;
-  state.endAddress = DEFAULT_BASE_ADDRESS;
-  state.startTime = state.useNowTime !== false ? getCurrentTimeValue() : "08:45";
-  state.vehicleId = "car2";
-  state.patients = buildCurrentSamplePatients();
-  persist();
-  syncInputsFromState();
-  renderVehicles();
-  renderPatients();
-  setStatus("川崎区内のサンプル患者様を入れました。");
-}
-
-function buildCurrentSamplePatients() {
-  const start = state.useNowTime !== false ? timeToMinutes(getCurrentTimeValue()) + 15 : 9 * 60;
-  return samplePatients.map((patient, index) => {
-    const earliest = start + index * 20;
-    return {
-      ...patient,
-      id: makeId(),
-      earliest: formatMinutes(earliest),
-      latest: formatMinutes(earliest + 45),
-    };
-  });
 }
 
 function clearPatients() {
@@ -1256,7 +1193,7 @@ function validatePlan() {
   if (!wheelchairCount && totalPassengers > 5 && vehicle.id !== "car3") {
     warnings.push("座席利用が6名以上の送迎です。3号車の利用を検討してください。");
   }
-  warnings.push("無料モードです。3分ごとの道路ルート再取得と時間帯補正で、できるだけ現在状況に近づけます。");
+  warnings.push("3分ごとの道路ルート再取得と時間帯補正で、できるだけ現在状況に近づけます。");
   return { blockers, warnings };
 }
 
@@ -1404,7 +1341,7 @@ async function fetchDrivingRoute(points) {
 }
 
 function renderRoute(start, plan, end, route, warnings) {
-  clearRoute();
+  clearRoute({ focusStart: false });
   const points = [start, ...plan.ordered.map((item) => item.location), ...(end ? [end] : [])];
   const routeWarnings = [...warnings];
 
@@ -1502,7 +1439,7 @@ function renderError(error) {
   els.resultPanel.innerHTML = `
     <div class="warning-list">
       <div class="warning-item danger">${escapeHtml(error.message || "エラーが発生しました。")}</div>
-      <div class="warning-item">住所を「川崎市川崎区」から入力するか、サンプルで動作確認してください。</div>
+      <div class="warning-item">住所を「川崎市川崎区」から入力するか、駅名・病院名・クリニック名で入力してください。</div>
     </div>
   `;
 }
@@ -1517,20 +1454,40 @@ function addMarker(point, label, title, className = "") {
   L.marker([point.lat, point.lon], { icon }).bindPopup(title).addTo(markerLayer);
 }
 
-function clearRoute() {
+function clearRoute(options = {}) {
+  const shouldFocusStart = options.focusStart !== false;
   markerLayer?.clearLayers();
   routeLayer?.clearLayers();
   lastRouteBounds = null;
   lastGoogleMapsUrl = "";
   els.googleMapsButton.disabled = true;
+  if (shouldFocusStart) focusStartAddressOnMap();
 }
 
 function fitRouteBounds() {
   if (lastRouteBounds?.isValid()) {
     map.fitBounds(lastRouteBounds.pad(0.18));
   } else {
-    map.setView(KAWASAKI_CENTER, 13);
+    focusStartAddressOnMap();
   }
+}
+
+function focusStartAddressOnMap() {
+  if (!map || !markerLayer) return;
+  if (lastRouteBounds?.isValid()) return;
+
+  const startLocation = resolveStartLocationForMap();
+  markerLayer.clearLayers();
+  addMarker(startLocation, "出", "出発地", "start");
+  map.setView([startLocation.lat, startLocation.lon], INITIAL_MAP_ZOOM);
+}
+
+function resolveStartLocationForMap() {
+  const coordinate = parseCoordinate(state.startAddress);
+  if (coordinate) return coordinate;
+  const known = findKnownLocation(state.startAddress || DEFAULT_BASE_ADDRESS);
+  if (known) return { lat: known.lat, lon: known.lon };
+  return BASE_LOCATION;
 }
 
 function setBusy(isBusy, message = "") {
