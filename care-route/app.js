@@ -80,6 +80,8 @@ const els = {
   useNowTime: document.getElementById("useNowTime"),
   vehicleGrid: document.getElementById("vehicleGrid"),
   patientForm: document.getElementById("patientForm"),
+  registeredPatientSelect: document.getElementById("registeredPatientSelect"),
+  registeredPatientNameList: document.getElementById("registeredPatientNameList"),
   patientName: document.getElementById("patientName"),
   patientAddress: document.getElementById("patientAddress"),
   patientPassengers: document.getElementById("patientPassengers"),
@@ -129,6 +131,7 @@ let sessionToken = sessionStorage.getItem(SESSION_STORAGE_KEY) || "";
 let currentUser = null;
 let careRole = "review";
 let pendingBulkPatients = [];
+let lastAutofilledPatientId = "";
 const geocodeCache = new Map();
 
 boot();
@@ -149,6 +152,10 @@ function bindEvents() {
   els.vehicleGrid.addEventListener("click", (event) => {
     const button = event.target.closest("[data-vehicle]");
     if (!button) return;
+    if (button.disabled) {
+      setStatus("車いす利用者がいる場合は、1号車または2号車のみ選択できます。", true);
+      return;
+    }
     state.vehicleId = button.dataset.vehicle;
     persist();
     renderVehicles();
@@ -169,6 +176,14 @@ function bindEvents() {
   els.useNowTime.addEventListener("change", () => {
     state.useNowTime = els.useNowTime.checked;
     persist();
+  });
+  els.registeredPatientSelect.addEventListener("change", () => {
+    applyRegisteredPatientToForm(els.registeredPatientSelect.value, { status: true });
+  });
+  els.patientName.addEventListener("input", handlePatientNameInput);
+  els.patientWheelchair.addEventListener("change", () => {
+    ensureVehicleCompatibility({ status: true });
+    renderVehicles();
   });
 
   els.patientForm.addEventListener("submit", addPatient);
@@ -221,11 +236,13 @@ function initMap() {
 }
 
 function renderVehicles() {
+  ensureVehicleCompatibility();
+  const wheelchairRequired = isWheelchairVehicleRequired();
   els.vehicleGrid.innerHTML = vehicles.map((vehicle) => `
-    <button class="vehicle-card ${vehicle.id === state.vehicleId ? "active" : ""}" type="button" data-vehicle="${escapeHtml(vehicle.id)}">
+    <button class="vehicle-card ${vehicle.id === state.vehicleId ? "active" : ""} ${wheelchairRequired && !vehicle.wheelchair ? "disabled" : ""}" type="button" data-vehicle="${escapeHtml(vehicle.id)}" ${wheelchairRequired && !vehicle.wheelchair ? "disabled" : ""}>
       <strong>${escapeHtml(vehicle.name)}</strong>
       <span>座席 ${vehicle.capacity}名${vehicle.wheelchair ? ` / 車いす${vehicle.wheelchairCapacity}台` : " / 車いす不可"}</span>
-      <span>${escapeHtml(vehicle.note)}</span>
+      <span>${wheelchairRequired && !vehicle.wheelchair ? "車いす利用者がいるため選択不可" : escapeHtml(vehicle.note)}</span>
     </button>
   `).join("");
 }
@@ -416,6 +433,7 @@ async function loadSecureCareRouteState() {
   state.registeredPatients = Array.isArray(data.customers) ? data.customers : [];
   persist();
   renderRegisteredPatients();
+  syncRegisteredPatientInputs();
 }
 
 function applyCareRolePermissions() {
@@ -535,12 +553,16 @@ function addPatient(event) {
     return;
   }
 
+  const changedVehicle = patient.wheelchair ? ensureVehicleCompatibilityForPatient(patient, { status: true }) : false;
   state.patients.push(patient);
   persist();
   els.patientForm.reset();
+  els.registeredPatientSelect.value = "";
   els.patientPassengers.value = "1";
+  lastAutofilledPatientId = "";
+  renderVehicles();
   renderPatients();
-  setStatus("患者様を追加しました。");
+  setStatus(changedVehicle ? "車いす利用者のため、1号車または2号車に切り替えて追加しました。" : "患者様を追加しました。");
 }
 
 function removePatient(event) {
@@ -548,6 +570,7 @@ function removePatient(event) {
   if (!button) return;
   state.patients = state.patients.filter((patient) => patient.id !== button.dataset.remove);
   persist();
+  renderVehicles();
   renderPatients();
   setStatus("患者様を削除しました。");
 }
@@ -555,6 +578,7 @@ function removePatient(event) {
 function clearPatients() {
   state.patients = [];
   persist();
+  renderVehicles();
   renderPatients();
   clearRoute();
   setStatus("患者様リストを空にしました。");
@@ -656,6 +680,8 @@ function renderRegisteredPatients() {
     ? []
     : [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja"));
 
+  syncRegisteredPatientInputs(registeredPatients);
+
   if (!registeredPatients.length) {
     els.registryList.innerHTML = `
       <div class="patient-card">
@@ -692,6 +718,81 @@ function renderRegisteredPatients() {
       </article>
     `).join("")}
   `;
+}
+
+function syncRegisteredPatientInputs(list = null) {
+  const registeredPatients = list || (careRole === "driver"
+    ? []
+    : [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja")));
+  const currentValue = els.registeredPatientSelect.value;
+
+  els.registeredPatientSelect.innerHTML = `
+    <option value="">直接入力する</option>
+    ${registeredPatients.map((patient) => `
+      <option value="${escapeHtml(patient.id)}">${escapeHtml(buildRegisteredPatientOptionLabel(patient))}</option>
+    `).join("")}
+  `;
+  els.registeredPatientSelect.value = registeredPatients.some((patient) => patient.id === currentValue) ? currentValue : "";
+  els.registeredPatientSelect.disabled = registeredPatients.length === 0 || !currentUser;
+  els.registeredPatientNameList.innerHTML = registeredPatients.map((patient) => `
+    <option value="${escapeHtml(patient.name)}">${escapeHtml(patient.address)}</option>
+  `).join("");
+}
+
+function buildRegisteredPatientOptionLabel(patient) {
+  return `${patient.name}${patient.wheelchair ? " / 車いす" : ""} / ${patient.address}`;
+}
+
+function applyRegisteredPatientToForm(patientId, options = {}) {
+  const patient = state.registeredPatients.find((item) => item.id === patientId);
+  if (!patient) return false;
+
+  els.registeredPatientSelect.value = patient.id;
+  els.patientName.value = patient.name;
+  els.patientAddress.value = patient.address;
+  els.patientPassengers.value = patient.passengers || 1;
+  els.patientWheelchair.checked = Boolean(patient.wheelchair);
+  els.patientEarliest.value = patient.earliest || "";
+  els.patientLatest.value = patient.latest || "";
+  lastAutofilledPatientId = patient.id;
+  ensureVehicleCompatibility({ status: true });
+  renderVehicles();
+
+  if (options.status) {
+    setStatus(`${patient.name} の登録情報を送迎登録へ反映しました。`);
+  }
+  return true;
+}
+
+function handlePatientNameInput() {
+  const match = findRegisteredPatientByName(els.patientName.value);
+  if (!match) {
+    els.registeredPatientSelect.value = "";
+    lastAutofilledPatientId = "";
+    return;
+  }
+
+  const canOverwrite = !els.patientAddress.value.trim() ||
+    lastAutofilledPatientId ||
+    normalizeText(els.patientAddress.value) === normalizeText(match.address);
+  if (!canOverwrite) return;
+
+  applyRegisteredPatientToForm(match.id);
+}
+
+function findRegisteredPatientByName(name) {
+  const normalizedName = normalizeText(name);
+  if (!normalizedName || normalizedName.length < 2) return null;
+
+  const registeredPatients = careRole === "driver" ? [] : state.registeredPatients;
+  const exact = registeredPatients.find((patient) => normalizeText(patient.name) === normalizedName);
+  if (exact) return exact;
+
+  const partial = registeredPatients.filter((patient) => {
+    const patientName = normalizeText(patient.name);
+    return patientName.includes(normalizedName) || normalizedName.includes(patientName);
+  });
+  return partial.length === 1 ? partial[0] : null;
 }
 
 async function saveRegisteredPatient(event) {
@@ -777,12 +878,16 @@ function addRegisteredPatientToRoute(id) {
     id: makeId(),
     registryId: registeredPatient.id,
   });
+  const changedVehicle = ensureVehicleCompatibilityForPatient(registeredPatient);
   state.activeAppTab = "plan";
   persist();
   renderAppTabs();
+  renderVehicles();
   renderPatients();
   logCareRouteAction("顧客呼び出し", `${registeredPatient.name} 様を今日の送迎へ追加しました。`, "customer", registeredPatient.id);
-  setStatus(`${registeredPatient.name} を今日の送迎に追加しました。`);
+  setStatus(changedVehicle
+    ? `${registeredPatient.name} を追加しました。車いす利用者のため1号車または2号車に切り替えました。`
+    : `${registeredPatient.name} を今日の送迎に追加しました。`);
 }
 
 function startEditingRegisteredPatient(id) {
@@ -967,6 +1072,7 @@ async function commitBulkImport() {
   pendingBulkPatients = [];
   els.bulkCommitButton.disabled = true;
   persist();
+  renderVehicles();
   renderPatients();
   renderRegisteredPatients();
   if (addToRoute) {
@@ -983,6 +1089,7 @@ function addPatientToTodayRoute(patient) {
     id: makeId(),
     registryId: patient.id || "",
   });
+  ensureVehicleCompatibilityForPatient(patient);
   return 1;
 }
 
@@ -1549,6 +1656,40 @@ function formatClock(date) {
 
 function getVehicle() {
   return vehicles.find((vehicle) => vehicle.id === state.vehicleId) || vehicles[0];
+}
+
+function isWheelchairVehicleRequired() {
+  return getWheelchairCount() > 0 || Boolean(els.patientWheelchair?.checked);
+}
+
+function ensureVehicleCompatibility(options = {}) {
+  if (!isWheelchairVehicleRequired()) return false;
+  const vehicle = getVehicle();
+  if (vehicle.wheelchair) return false;
+  const nextVehicle = vehicles.find((item) => item.wheelchair);
+  if (!nextVehicle) return false;
+
+  state.vehicleId = nextVehicle.id;
+  persist();
+  if (options.status) {
+    setStatus("車いす利用者がいるため、1号車または2号車のみ選択できます。");
+  }
+  return true;
+}
+
+function ensureVehicleCompatibilityForPatient(patient, options = {}) {
+  if (!patient?.wheelchair) return false;
+  const vehicle = getVehicle();
+  if (vehicle.wheelchair) return false;
+  const nextVehicle = vehicles.find((item) => item.wheelchair);
+  if (!nextVehicle) return false;
+
+  state.vehicleId = nextVehicle.id;
+  persist();
+  if (options.status) {
+    setStatus("車いす利用者のため、1号車または2号車へ切り替えました。");
+  }
+  return true;
 }
 
 function getTotalPassengers() {

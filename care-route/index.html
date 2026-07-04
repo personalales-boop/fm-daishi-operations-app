@@ -107,8 +107,15 @@
               </div>
               <form class="patient-form" id="patientForm">
                 <label>
+                  <span>登録済み患者様から選択</span>
+                  <select id="registeredPatientSelect">
+                    <option value="">直接入力する</option>
+                  </select>
+                </label>
+                <label>
                   <span>お名前</span>
-                  <input id="patientName" type="text" placeholder="例: 田中様" required />
+                  <input id="patientName" type="text" list="registeredPatientNameList" placeholder="例: 田中様" required />
+                  <datalist id="registeredPatientNameList"></datalist>
                 </label>
                 <label>
                   <span>住所</span>

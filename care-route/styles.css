@@ -415,6 +415,20 @@ select:focus {
   background: #eaf4ff;
 }
 
+.vehicle-card:disabled,
+.vehicle-card.disabled {
+  cursor: not-allowed;
+  color: #8b98a7;
+  background: #eef2f6;
+  border-color: #d7dde5;
+  opacity: 0.72;
+}
+
+.vehicle-card:disabled strong,
+.vehicle-card.disabled strong {
+  color: #657384;
+}
+
 .vehicle-card strong {
   color: var(--ink);
   font-size: 1.05rem;
@@ -486,6 +500,10 @@ select:focus {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 10px;
+}
+
+.quick-actions > :only-child {
+  grid-column: 1 / -1;
 }
 
 .bulk-import-panel {
