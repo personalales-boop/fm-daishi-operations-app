@@ -520,6 +520,12 @@ async function handleLogin(event) {
 
 function logout(showMessage) {
   if (eventSource) eventSource.close();
+  if (!staticMode && authToken) {
+    fetch("/api/logout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${authToken}` },
+    }).catch(() => {});
+  }
   eventSource = null;
   authToken = "";
   currentUser = null;

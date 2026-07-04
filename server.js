@@ -11,13 +11,26 @@ const CARE_ROUTE_FILE = path.join(DATA_DIR, "care-route-secure.json");
 const CARE_ROUTE_BACKUP_DIR = path.join(DATA_DIR, "backups");
 const SCHEDULE_MASTER_FILE = path.join(DATA_DIR, "schedule-masters.json");
 const MAX_BODY_BYTES = 1024 * 1024;
-const CARE_ROUTE_KEY_SOURCE = process.env.CARE_ROUTE_DATA_KEY || "fm-daishi-care-route-development-key";
-const CARE_ROUTE_KEY_IS_CONFIGURED = Boolean(process.env.CARE_ROUTE_DATA_KEY);
+const APP_ENV = process.env.APP_ENV || process.env.NODE_ENV || "development";
+const IS_PRODUCTION = APP_ENV === "production";
+const SESSION_TTL_HOURS = readPositiveNumber(process.env.SESSION_TTL_HOURS, 12);
+const SESSION_TTL_MS = SESSION_TTL_HOURS * 60 * 60 * 1000;
+const LOGIN_RATE_LIMIT_WINDOW_MS = readPositiveNumber(process.env.LOGIN_RATE_LIMIT_WINDOW_MS, 10 * 60 * 1000);
+const LOGIN_RATE_LIMIT_MAX = readPositiveNumber(process.env.LOGIN_RATE_LIMIT_MAX, 8);
+const loginPinOverrides = parseLoginPinOverrides(process.env.LOGIN_PINS || "");
+const careRouteKeySourceRaw = process.env.CARE_ROUTE_DATA_KEY || "";
+
+if (IS_PRODUCTION && careRouteKeySourceRaw.length < 32) {
+  throw new Error("本番環境では32文字以上の CARE_ROUTE_DATA_KEY を環境変数で設定してください。");
+}
+
+const CARE_ROUTE_KEY_SOURCE = careRouteKeySourceRaw || "fm-daishi-care-route-development-key";
+const CARE_ROUTE_KEY_IS_CONFIGURED = Boolean(careRouteKeySourceRaw);
 const CARE_ROUTE_KEY = crypto.createHash("sha256").update(CARE_ROUTE_KEY_SOURCE).digest();
 const CARE_ROUTE_RETENTION = {
-  deletedCustomerDays: Number(process.env.CARE_ROUTE_DELETED_CUSTOMER_DAYS || 30),
-  routeDraftDays: Number(process.env.CARE_ROUTE_ROUTE_DRAFT_DAYS || 90),
-  auditDays: Number(process.env.CARE_ROUTE_AUDIT_DAYS || 730),
+  deletedCustomerDays: readPositiveNumber(process.env.CARE_ROUTE_DELETED_CUSTOMER_DAYS, 30),
+  routeDraftDays: readPositiveNumber(process.env.CARE_ROUTE_ROUTE_DRAFT_DAYS, 90),
+  auditDays: readPositiveNumber(process.env.CARE_ROUTE_AUDIT_DAYS, 730),
 };
 
 const scheduleMasters = loadScheduleMasters();
@@ -38,7 +51,7 @@ const staffMembers = [
 ];
 
 const adminStaffIds = new Set(["shimizu", "suyama"]);
-const initialPins = {
+const defaultPins = {
   shimizu: "0000",
   suyama: "0001",
   sakamoto_tadashi: "1103",
@@ -50,15 +63,16 @@ const initialPins = {
   tazawa: "1109",
   uruchida: "1110",
   is: "1111",
+  customer_demo: "2222",
 };
 
-const loginUsers = staffMembers.map((staff) => ({
+const rawLoginUsers = staffMembers.map((staff) => ({
   id: staff.id,
   staffId: staff.id,
   name: staff.name,
   role: staff.role,
   permission: adminStaffIds.has(staff.id) ? "admin" : "staff",
-  pin: initialPins[staff.id],
+  pin: resolveLoginPin(staff.id, defaultPins[staff.id]),
   color: staff.color,
 })).concat([
   {
@@ -67,10 +81,13 @@ const loginUsers = staffMembers.map((staff) => ({
     name: "お客様確認用",
     role: "閲覧専用",
     permission: "viewer",
-    pin: "2222",
+    pin: resolveLoginPin("customer_demo", defaultPins.customer_demo),
     color: "#5f6368",
   },
 ]);
+
+const loginUsers = rawLoginUsers.filter((user) => user.pin || !IS_PRODUCTION);
+assertProductionLoginConfig(loginUsers);
 
 let shiftSlots = defaultShiftSlots.map((slot) => ({ ...slot }));
 
@@ -86,6 +103,7 @@ const mimeTypes = {
 };
 
 const sessions = new Map();
+const loginAttempts = new Map();
 const eventClients = new Set();
 let store = loadStore();
 let careRouteStore = loadCareRouteStore();
@@ -109,6 +127,9 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`FM Daishi shift app running at http://localhost:${PORT}`);
 });
+
+const sessionCleanupTimer = setInterval(cleanExpiredSessions, 15 * 60 * 1000);
+sessionCleanupTimer.unref?.();
 
 function loadScheduleMasters() {
   try {
@@ -153,6 +174,52 @@ function createStaff(id, code, name, color) {
   };
 }
 
+function readPositiveNumber(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseLoginPinOverrides(value) {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (error) {
+    if (IS_PRODUCTION) {
+      throw new Error("LOGIN_PINS は JSON 形式で設定してください。例: {\"shimizu\":\"123456\"}");
+    }
+    console.warn("LOGIN_PINS を読み取れませんでした。開発用PINを使用します。");
+    return {};
+  }
+}
+
+function resolveLoginPin(userId, developmentFallback) {
+  const directEnvKey = `PIN_${toEnvKey(userId)}`;
+  if (process.env[directEnvKey]) return String(process.env[directEnvKey]);
+  if (Object.prototype.hasOwnProperty.call(loginPinOverrides, userId)) {
+    return String(loginPinOverrides[userId]);
+  }
+  return IS_PRODUCTION ? "" : developmentFallback;
+}
+
+function toEnvKey(value) {
+  return String(value).toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+}
+
+function assertProductionLoginConfig(users) {
+  if (!IS_PRODUCTION) return;
+
+  const enabledAdmins = users.filter((user) => user.permission === "admin");
+  if (enabledAdmins.length === 0) {
+    throw new Error("本番環境では少なくとも1名の管理者PINを LOGIN_PINS または PIN_SHIMIZU / PIN_SUYAMA で設定してください。");
+  }
+
+  const weakUsers = users.filter((user) => String(user.pin || "").length < 6);
+  if (weakUsers.length > 0) {
+    throw new Error(`本番環境のPINは6文字以上にしてください: ${weakUsers.map((user) => user.id).join(", ")}`);
+  }
+}
+
 async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/config") {
     sendJson(res, 200, {
@@ -167,6 +234,7 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/care-route/public-config") {
     sendJson(res, 200, {
       backend: true,
+      production: IS_PRODUCTION,
       users: loginUsers.map(publicUser),
       security: getCareRouteSecuritySummary(),
     });
@@ -175,16 +243,36 @@ async function handleApi(req, res, url) {
 
   if (req.method === "POST" && url.pathname === "/api/login") {
     const body = await readJsonBody(req);
-    const user = loginUsers.find((item) => item.id === body.userId && item.pin === String(body.pin || ""));
+    const userId = String(body.userId || "");
+
+    if (isLoginRateLimited(req, userId)) {
+      sendJson(res, 429, { error: "ログイン試行が多すぎます。10分ほど時間を置いてください。" });
+      return;
+    }
+
+    const user = loginUsers.find((item) => item.id === userId && item.pin === String(body.pin || ""));
     if (!user) {
+      recordFailedLogin(req, userId);
       sendJson(res, 401, { error: "ログインIDまたはPINが違います。" });
       return;
     }
 
+    clearLoginAttempts(req, userId);
     const token = crypto.randomUUID();
     const sessionUser = publicUser(user);
-    sessions.set(token, { token, user: sessionUser, createdAt: new Date().toISOString() });
-    sendJson(res, 200, { token, user: sessionUser });
+    const createdAt = Date.now();
+    sessions.set(token, {
+      token,
+      user: sessionUser,
+      createdAt: new Date(createdAt).toISOString(),
+      expiresAt: new Date(createdAt + SESSION_TTL_MS).toISOString(),
+      lastSeenAt: new Date(createdAt).toISOString(),
+    });
+    sendJson(res, 200, {
+      token,
+      user: sessionUser,
+      expiresAt: new Date(createdAt + SESSION_TTL_MS).toISOString(),
+    });
     return;
   }
 
@@ -196,6 +284,12 @@ async function handleApi(req, res, url) {
     }
 
     attachEventClient(req, res);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/logout") {
+    deleteSession(req, url);
+    sendJson(res, 200, { ok: true });
     return;
   }
 
@@ -1461,12 +1555,12 @@ function applySwap(post) {
 }
 
 function attachEventClient(req, res) {
-  res.writeHead(200, {
+  res.writeHead(200, withSecurityHeaders({
     "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive",
     "Content-Type": "text/event-stream; charset=utf-8",
     "X-Accel-Buffering": "no",
-  });
+  }));
   res.write(`event: connected\ndata: ${JSON.stringify({ at: new Date().toISOString() })}\n\n`);
 
   eventClients.add(res);
@@ -2437,8 +2531,15 @@ function careRouteAudit(user, action, detail, targetType, targetId) {
 
 function getCareRouteSecuritySummary() {
   return {
+    appEnv: APP_ENV,
+    production: IS_PRODUCTION,
     authRequired: true,
     roleBasedAccess: true,
+    sessionTtlHours: SESSION_TTL_HOURS,
+    loginRateLimit: {
+      maxAttempts: LOGIN_RATE_LIMIT_MAX,
+      windowMinutes: Math.round(LOGIN_RATE_LIMIT_WINDOW_MS / 60000),
+    },
     auditLog: true,
     encryptedAtRest: true,
     encryptionKeyConfigured: CARE_ROUTE_KEY_IS_CONFIGURED,
@@ -2484,10 +2585,10 @@ async function serveStatic(res, requestedPath) {
   }
 
   const ext = path.extname(filePath);
-  res.writeHead(200, {
+  res.writeHead(200, withSecurityHeaders({
     "Content-Type": mimeTypes[ext] || "application/octet-stream",
     "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=60",
-  });
+  }));
   fs.createReadStream(filePath).pipe(res);
 }
 
@@ -2516,19 +2617,92 @@ function readJsonBody(req) {
 }
 
 function requireSession(req, url) {
+  const token = getSessionToken(req, url);
+  if (!token) return null;
+
+  const session = sessions.get(token);
+  if (!session) return null;
+
+  const expiresAt = Date.parse(session.expiresAt || "");
+  if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) {
+    sessions.delete(token);
+    return null;
+  }
+
+  session.lastSeenAt = new Date().toISOString();
+  return session;
+}
+
+function getSessionToken(req, url) {
   const header = req.headers.authorization || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : url.searchParams.get("token");
-  return sessions.get(token);
+  return header.startsWith("Bearer ") ? header.slice(7) : url.searchParams.get("token");
+}
+
+function deleteSession(req, url) {
+  const token = getSessionToken(req, url);
+  if (token) sessions.delete(token);
+}
+
+function cleanExpiredSessions() {
+  const now = Date.now();
+  for (const [token, session] of sessions.entries()) {
+    const expiresAt = Date.parse(session.expiresAt || "");
+    if (Number.isFinite(expiresAt) && expiresAt <= now) {
+      sessions.delete(token);
+    }
+  }
+}
+
+function getClientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return req.socket?.remoteAddress || "unknown";
+}
+
+function loginAttemptKey(req, userId) {
+  return `${getClientIp(req)}:${String(userId || "unknown")}`;
+}
+
+function isLoginRateLimited(req, userId) {
+  const entry = loginAttempts.get(loginAttemptKey(req, userId));
+  if (!entry) return false;
+  if (Date.now() - entry.firstAt > LOGIN_RATE_LIMIT_WINDOW_MS) return false;
+  return entry.count >= LOGIN_RATE_LIMIT_MAX;
+}
+
+function recordFailedLogin(req, userId) {
+  const key = loginAttemptKey(req, userId);
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || now - entry.firstAt > LOGIN_RATE_LIMIT_WINDOW_MS) {
+    loginAttempts.set(key, { count: 1, firstAt: now });
+    return;
+  }
+  entry.count += 1;
+}
+
+function clearLoginAttempts(req, userId) {
+  loginAttempts.delete(loginAttemptKey(req, userId));
 }
 
 function sendJson(res, status, payload) {
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
+  res.writeHead(status, withSecurityHeaders({ "Content-Type": "application/json; charset=utf-8" }));
   res.end(JSON.stringify(payload));
 }
 
 function sendText(res, status, text) {
-  res.writeHead(status, { "Content-Type": "text/plain; charset=utf-8" });
+  res.writeHead(status, withSecurityHeaders({ "Content-Type": "text/plain; charset=utf-8" }));
   res.end(text);
+}
+
+function withSecurityHeaders(headers = {}) {
+  return {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+    "Referrer-Policy": "same-origin",
+    "Permissions-Policy": "geolocation=(self), camera=(), microphone=()",
+    ...headers,
+  };
 }
 
 function publicUser(user) {

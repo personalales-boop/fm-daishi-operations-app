@@ -348,12 +348,14 @@ function renderSecurityPanel(security) {
   els.securityPanel.hidden = false;
   els.securityTitle.textContent = "本番セキュリティ有効";
   const keyStatus = security?.encryptionKeyConfigured ? "本番暗号キー設定済み" : "開発用暗号キー";
-  els.securityStatus.textContent = `ログイン必須 / 権限管理 / 操作ログ / 暗号化保存 / バックアップ有効（${keyStatus}）`;
-  els.securityChecklist.innerHTML = security?.encryptionKeyConfigured ? `
-    <div class="security-item"><span class="security-mark">OK</span><span>本番データ入力可: 本番暗号キー、ログイン、権限管理、暗号化保存、バックアップが有効です。</span></div>
+  const modeStatus = security?.production ? "本番モード" : "開発・検証モード";
+  const ttlText = security?.sessionTtlHours ? `セッション${security.sessionTtlHours}時間` : "期限付きセッション";
+  els.securityStatus.textContent = `${modeStatus} / ログイン必須 / 権限管理 / 操作ログ / 暗号化保存 / ${ttlText}（${keyStatus}）`;
+  els.securityChecklist.innerHTML = security?.production && security?.encryptionKeyConfigured ? `
+    <div class="security-item"><span class="security-mark">OK</span><span>本番データ入力可: 本番暗号キー、ログイン制限、権限管理、暗号化保存、バックアップが有効です。</span></div>
     <div class="security-item"><span class="security-mark">OK</span><span>画面を閉じると、ルート作成中の患者名・住所はブラウザ保存に残さない設計です。</span></div>
   ` : `
-    <div class="security-item warning"><span class="security-mark">!</span><span>開発用暗号キーです。本番の氏名・住所を入れる前に、サーバー環境変数 CARE_ROUTE_DATA_KEY を設定してください。</span></div>
+    <div class="security-item warning"><span class="security-mark">!</span><span>検証用設定です。本番の氏名・住所を入れる前に NODE_ENV=production、CARE_ROUTE_DATA_KEY、LOGIN_PINS を設定してください。</span></div>
     <div class="security-item"><span class="security-mark">OK</span><span>ログイン、権限管理、暗号化保存、バックアップの動作確認はできます。</span></div>
   `;
   els.loginForm.hidden = false;
@@ -519,6 +521,9 @@ async function handleLogin(event) {
 }
 
 function logout() {
+  if (backendAvailable && sessionToken) {
+    apiFetch("/api/logout", { method: "POST" }).catch(() => {});
+  }
   sessionToken = "";
   currentUser = null;
   careRole = "demo";

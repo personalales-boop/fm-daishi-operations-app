@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: fm-daishi-operations-app
+    env: node
+    plan: starter
+    buildCommand: npm install --omit=dev
+    startCommand: npm run start:production
+    autoDeploy: false
+    disk:
+      name: fm-daishi-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CARE_ROUTE_DATA_KEY
+        sync: false
+      - key: LOGIN_PINS
+        sync: false
+      - key: SESSION_TTL_HOURS
+        value: "12"
+      - key: LOGIN_RATE_LIMIT_MAX
+        value: "8"
+      - key: LOGIN_RATE_LIMIT_WINDOW_MS
+        value: "600000"
+      - key: CARE_ROUTE_DELETED_CUSTOMER_DAYS
+        value: "30"
+      - key: CARE_ROUTE_ROUTE_DRAFT_DAYS
+        value: "90"
+      - key: CARE_ROUTE_AUDIT_DAYS
+        value: "730"

@@ -1,9 +1,9 @@
+.git
 .DS_Store
-node_modules/
+node_modules
 npm-debug.log*
-*.local
 .env
 .env.*
-!.env.production.example
 data/care-route-secure.json
-data/backups/
+data/backups
+screenshots

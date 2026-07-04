@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check app.js"
+    "start:production": "NODE_ENV=production node server.js",
+    "check": "node --check server.js && node --check app.js && node --check care-route/app.js"
   }
 }
