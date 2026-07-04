@@ -12,10 +12,10 @@ const KAWASAKI_BOUNDS = {
 };
 
 const vehicles = [
-  { id: "car1", name: "1号車", capacity: 4, wheelchair: false, note: "通常送迎 / 4名までが多い" },
-  { id: "car2", name: "2号車", capacity: 4, wheelchair: true, note: "車椅子対応 / 4名まで" },
-  { id: "car3", name: "3号車", capacity: 8, wheelchair: false, note: "定員8名 / 多人数向け" },
-  { id: "car4", name: "4号車", capacity: 5, wheelchair: false, note: "定員5名 / 中型" },
+  { id: "car1", name: "1号車", capacity: 5, wheelchair: true, wheelchairCapacity: 2, note: "車いす2台 / 座席5名まで" },
+  { id: "car2", name: "2号車", capacity: 5, wheelchair: true, wheelchairCapacity: 2, note: "車いす2台 / 座席5名まで" },
+  { id: "car3", name: "3号車", capacity: 8, wheelchair: false, wheelchairCapacity: 0, note: "座席8名 / 多人数向け" },
+  { id: "car4", name: "4号車", capacity: 5, wheelchair: false, wheelchairCapacity: 0, note: "座席5名 / 車いす不可" },
 ];
 
 const demoLoginUsers = [
@@ -102,6 +102,7 @@ const els = {
   securityPanel: document.getElementById("securityPanel"),
   securityTitle: document.getElementById("securityTitle"),
   securityStatus: document.getElementById("securityStatus"),
+  securityChecklist: document.getElementById("securityChecklist"),
   loginForm: document.getElementById("loginForm"),
   loginUserSelect: document.getElementById("loginUserSelect"),
   loginPin: document.getElementById("loginPin"),
@@ -138,6 +139,13 @@ const els = {
   importPatientsButton: document.getElementById("importPatientsButton"),
   clearRegistryFormButton: document.getElementById("clearRegistryFormButton"),
   registryList: document.getElementById("registryList"),
+  bulkImportText: document.getElementById("bulkImportText"),
+  bulkImportFile: document.getElementById("bulkImportFile"),
+  bulkAddToRoute: document.getElementById("bulkAddToRoute"),
+  bulkTemplateButton: document.getElementById("bulkTemplateButton"),
+  bulkPreviewButton: document.getElementById("bulkPreviewButton"),
+  bulkCommitButton: document.getElementById("bulkCommitButton"),
+  bulkImportPreview: document.getElementById("bulkImportPreview"),
   optimizeButton: document.getElementById("optimizeButton"),
   autoRefreshButton: document.getElementById("autoRefreshButton"),
   googleMapsButton: document.getElementById("googleMapsButton"),
@@ -159,6 +167,7 @@ let backendAvailable = false;
 let sessionToken = sessionStorage.getItem(SESSION_STORAGE_KEY) || "";
 let currentUser = null;
 let careRole = "demo";
+let pendingBulkPatients = [];
 const geocodeCache = new Map();
 
 boot();
@@ -204,6 +213,14 @@ function bindEvents() {
   els.importPatientsButton.addEventListener("click", registerCurrentPatients);
   els.clearRegistryFormButton.addEventListener("click", resetRegistryForm);
   els.registryCancelEditButton.addEventListener("click", resetRegistryForm);
+  els.bulkTemplateButton.addEventListener("click", copyBulkTemplate);
+  els.bulkPreviewButton.addEventListener("click", previewBulkImport);
+  els.bulkCommitButton.addEventListener("click", commitBulkImport);
+  els.bulkImportText.addEventListener("input", () => {
+    pendingBulkPatients = [];
+    els.bulkCommitButton.disabled = true;
+  });
+  els.bulkImportFile.addEventListener("change", loadBulkImportFile);
   els.loginForm.addEventListener("submit", handleLogin);
   els.logoutButton.addEventListener("click", logout);
   els.appTabs.forEach((tab) => {
@@ -243,7 +260,7 @@ function renderVehicles() {
   els.vehicleGrid.innerHTML = vehicles.map((vehicle) => `
     <button class="vehicle-card ${vehicle.id === state.vehicleId ? "active" : ""}" type="button" data-vehicle="${escapeHtml(vehicle.id)}">
       <strong>${escapeHtml(vehicle.name)}</strong>
-      <span>定員 ${vehicle.capacity}名${vehicle.wheelchair ? " / 車椅子対応" : ""}</span>
+      <span>座席 ${vehicle.capacity}名${vehicle.wheelchair ? ` / 車いす${vehicle.wheelchairCapacity}台` : " / 車いす不可"}</span>
       <span>${escapeHtml(vehicle.note)}</span>
     </button>
   `).join("");
@@ -332,6 +349,13 @@ function renderSecurityPanel(security) {
   els.securityTitle.textContent = "本番セキュリティ有効";
   const keyStatus = security?.encryptionKeyConfigured ? "本番暗号キー設定済み" : "開発用暗号キー";
   els.securityStatus.textContent = `ログイン必須 / 権限管理 / 操作ログ / 暗号化保存 / バックアップ有効（${keyStatus}）`;
+  els.securityChecklist.innerHTML = security?.encryptionKeyConfigured ? `
+    <div class="security-item"><span class="security-mark">OK</span><span>本番データ入力可: 本番暗号キー、ログイン、権限管理、暗号化保存、バックアップが有効です。</span></div>
+    <div class="security-item"><span class="security-mark">OK</span><span>画面を閉じると、ルート作成中の患者名・住所はブラウザ保存に残さない設計です。</span></div>
+  ` : `
+    <div class="security-item warning"><span class="security-mark">!</span><span>開発用暗号キーです。本番の氏名・住所を入れる前に、サーバー環境変数 CARE_ROUTE_DATA_KEY を設定してください。</span></div>
+    <div class="security-item"><span class="security-mark">OK</span><span>ログイン、権限管理、暗号化保存、バックアップの動作確認はできます。</span></div>
+  `;
   els.loginForm.hidden = false;
   els.sessionActions.hidden = true;
 }
@@ -340,6 +364,10 @@ function renderDemoSecurityPanel() {
   els.securityPanel.hidden = false;
   els.securityTitle.textContent = "公開デモログイン";
   els.securityStatus.textContent = "確認用URLでもログインが必要です。本番の個人情報入力はNode.jsサーバー版で行ってください。";
+  els.securityChecklist.innerHTML = `
+    <div class="security-item warning"><span class="security-mark">!</span><span>この公開URLは納品確認用です。本名・実住所は入れず、架空データで確認してください。</span></div>
+    <div class="security-item"><span class="security-mark">OK</span><span>本番運用ではNode.jsサーバー版に切り替え、ログイン、権限、暗号化保存、バックアップを使います。</span></div>
+  `;
   renderLoginUsers(demoLoginUsers);
   const demoUser = demoLoginUsers.find((user) => user.id === sessionStorage.getItem(DEMO_SESSION_STORAGE_KEY));
   if (demoUser) {
@@ -406,8 +434,14 @@ function setAppInteractive(enabled) {
     els.autoRefreshButton,
     els.importPatientsButton,
     els.clearRegistryFormButton,
+    els.bulkTemplateButton,
+    els.bulkPreviewButton,
+    els.bulkCommitButton,
   ].forEach((button) => {
     if (button) button.disabled = !enabled;
+  });
+  [els.bulkImportText, els.bulkImportFile, els.bulkAddToRoute].forEach((element) => {
+    if (element) element.disabled = !enabled;
   });
   if (!enabled) els.googleMapsButton.disabled = true;
 }
@@ -421,12 +455,19 @@ async function loadSecureCareRouteState() {
 
 function applyCareRolePermissions() {
   setAppInteractive(true);
-  const canEditCustomers = ["admin", "dispatcher"].includes(careRole);
+  const canEdit = canEditCustomers();
   els.registryForm.querySelectorAll("input, select, button").forEach((element) => {
-    element.disabled = !canEditCustomers;
+    element.disabled = !canEdit;
   });
-  els.importPatientsButton.disabled = !canEditCustomers;
-  els.clearRegistryFormButton.disabled = !canEditCustomers;
+  els.importPatientsButton.disabled = !canEdit;
+  els.clearRegistryFormButton.disabled = !canEdit;
+  [els.bulkImportText, els.bulkImportFile, els.bulkAddToRoute, els.bulkTemplateButton, els.bulkPreviewButton, els.bulkCommitButton].forEach((element) => {
+    element.disabled = !canEdit || (element === els.bulkCommitButton && pendingBulkPatients.length === 0);
+  });
+}
+
+function canEditCustomers() {
+  return careRole !== "driver" && (!backendAvailable || ["admin", "dispatcher"].includes(careRole));
 }
 
 function applyDemoSession(user) {
@@ -639,7 +680,8 @@ function syncAutoRefresh() {
 function renderPatients() {
   const vehicle = getVehicle();
   const totalPassengers = getTotalPassengers();
-  const wheelchairCount = state.patients.filter((patient) => patient.wheelchair).length;
+  const wheelchairCount = getWheelchairCount();
+  const seatedPassengers = getSeatedPassengers();
 
   if (!state.patients.length) {
     els.patientList.innerHTML = `<div class="patient-card"><div><strong>今日の送迎対象は未登録です</strong><span>住所と時間制約を入力するか、患者さま登録から呼び出してください。</span></div></div>`;
@@ -649,14 +691,14 @@ function renderPatients() {
   els.patientList.innerHTML = `
     <div class="patient-card">
       <div>
-        <strong>合計 ${totalPassengers}名 / ${vehicle.name} 定員 ${vehicle.capacity}名</strong>
-        <span>${wheelchairCount ? `車椅子 ${wheelchairCount}名` : "車椅子なし"} / ${getCapacityMessage(vehicle)}</span>
+        <strong>合計 ${totalPassengers}名 / ${vehicle.name}</strong>
+        <span>座席 ${seatedPassengers}/${vehicle.capacity}名・車いす ${wheelchairCount}/${vehicle.wheelchairCapacity || 0}台 / ${getCapacityMessage(vehicle)}</span>
       </div>
     </div>
     ${state.patients.map((patient) => `
       <article class="patient-card">
         <div>
-          <strong>${escapeHtml(patient.name)} ${patient.wheelchair ? "・車椅子" : ""}</strong>
+          <strong>${escapeHtml(patient.name)} ${patient.wheelchair ? "・車いす" : ""}</strong>
           <span>${escapeHtml(patient.address)}</span>
           <span>${escapeHtml(formatWindow(patient))} / ${patient.passengers}名</span>
         </div>
@@ -667,7 +709,7 @@ function renderPatients() {
 }
 
 function renderRegisteredPatients() {
-  const canEditCustomers = careRole !== "driver" && (!backendAvailable || ["admin", "dispatcher"].includes(careRole));
+  const canEdit = canEditCustomers();
   const registeredPatients = careRole === "driver"
     ? []
     : [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja"));
@@ -694,13 +736,13 @@ function renderRegisteredPatients() {
     ${registeredPatients.map((patient) => `
       <article class="patient-card registry-card">
         <div>
-          <strong>${escapeHtml(patient.name)} ${patient.wheelchair ? "・車椅子" : ""}</strong>
+          <strong>${escapeHtml(patient.name)} ${patient.wheelchair ? "・車いす" : ""}</strong>
           <span>${escapeHtml(patient.address)}</span>
           <span>${escapeHtml(formatWindow(patient))} / ${patient.passengers}名</span>
         </div>
         <div class="card-actions">
           <button class="call-button" type="button" data-call-registry="${escapeHtml(patient.id)}">呼び出す</button>
-          ${canEditCustomers ? `
+          ${canEdit ? `
             <button class="edit-button" type="button" data-edit-registry="${escapeHtml(patient.id)}">編集</button>
             <button class="remove-button" type="button" data-delete-registry="${escapeHtml(patient.id)}">削除</button>
           ` : ""}
@@ -893,6 +935,246 @@ async function registerCurrentPatients() {
   setStatus(addedCount ? `今日の送迎から${addedCount}名を登録しました。` : "今日の送迎対象はすべて登録済みです。");
 }
 
+async function loadBulkImportFile() {
+  const file = els.bulkImportFile.files?.[0];
+  if (!file) return;
+  try {
+    els.bulkImportText.value = await file.text();
+    pendingBulkPatients = [];
+    els.bulkCommitButton.disabled = true;
+    setStatus("ファイルを読み込みました。内容を確認してください。");
+  } catch {
+    setStatus("ファイルを読み込めませんでした。CSVまたはテキストで保存してから再度選択してください。", true);
+  }
+}
+
+async function copyBulkTemplate() {
+  const template = [
+    ["利用者名", "住所", "人数", "車いす", "何時以降", "何時まで"].join("\t"),
+    ["田中様", "川崎市川崎区大師町10-6", "1", "なし", "09:00", "10:00"].join("\t"),
+    ["佐藤様", "川崎大師駅", "1", "あり", "09:30", ""].join("\t"),
+  ].join("\n");
+  try {
+    await navigator.clipboard.writeText(template);
+    setStatus("Excel用ひな形をコピーしました。Excelへ貼り付けて編集できます。");
+  } catch {
+    els.bulkImportText.value = template;
+    setStatus("ひな形を入力欄に入れました。コピーできない端末ではここから編集してください。");
+  }
+}
+
+function previewBulkImport() {
+  const rows = parseBulkPatients(els.bulkImportText.value);
+  pendingBulkPatients = rows.valid;
+  els.bulkCommitButton.disabled = pendingBulkPatients.length === 0 || !canEditCustomers();
+  renderBulkPreview(rows);
+  if (!rows.valid.length) {
+    setStatus("取り込める利用者が見つかりません。利用者名と住所を確認してください。", true);
+    return;
+  }
+  setStatus(`${rows.valid.length}名を確認しました。問題なければ登録してください。`);
+}
+
+async function commitBulkImport() {
+  if (!pendingBulkPatients.length) {
+    setStatus("先に内容を確認してください。", true);
+    return;
+  }
+  if (!canEditCustomers()) {
+    setStatus("顧客登録の編集権限がありません。", true);
+    return;
+  }
+
+  const addToRoute = els.bulkAddToRoute.checked;
+  let savedCount = 0;
+  let routeAddedCount = 0;
+
+  if (backendAvailable && currentUser) {
+    try {
+      for (const patient of pendingBulkPatients) {
+        await apiFetch("/api/care-route/customer", {
+          method: "POST",
+          body: {
+            name: patient.name,
+            address: patient.address,
+            passengers: patient.passengers,
+            wheelchair: patient.wheelchair,
+            earliest: patient.earliest,
+            latest: patient.latest,
+          },
+        });
+        savedCount += 1;
+        if (addToRoute) routeAddedCount += addPatientToTodayRoute(patient);
+      }
+      await loadSecureCareRouteState();
+    } catch (error) {
+      setStatus(error.message || "一括登録に失敗しました。", true);
+      return;
+    }
+  } else {
+    pendingBulkPatients.forEach((patient) => {
+      const duplicate = state.registeredPatients.find((registeredPatient) => isSamePatientRecord(registeredPatient, patient));
+      if (!duplicate) {
+        state.registeredPatients.push({ ...patient, id: makeId() });
+        savedCount += 1;
+      }
+      if (addToRoute) routeAddedCount += addPatientToTodayRoute(patient);
+    });
+  }
+
+  pendingBulkPatients = [];
+  els.bulkCommitButton.disabled = true;
+  persist();
+  renderPatients();
+  renderRegisteredPatients();
+  if (addToRoute) {
+    state.activeAppTab = "plan";
+    renderAppTabs();
+  }
+  setStatus(`Excel一覧から${savedCount}名を登録しました${addToRoute ? `。今日の送迎へ${routeAddedCount}名を追加しました。` : "。"}`);
+}
+
+function addPatientToTodayRoute(patient) {
+  if (state.patients.some((item) => isSamePatientRecord(item, patient))) return 0;
+  state.patients.push({
+    ...patient,
+    id: makeId(),
+    registryId: patient.id || "",
+  });
+  return 1;
+}
+
+function parseBulkPatients(rawText) {
+  const lines = String(rawText || "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const result = { valid: [], errors: [] };
+  if (!lines.length) return result;
+
+  const delimiter = lines.some((line) => line.includes("\t")) ? "\t" : ",";
+  let headerMap = null;
+
+  lines.forEach((line, index) => {
+    const columns = delimiter === "\t" ? line.split("\t") : parseCsvLine(line);
+    const normalizedColumns = columns.map((column) => column.trim());
+    if (index === 0 && looksLikeBulkHeader(normalizedColumns)) {
+      headerMap = createBulkHeaderMap(normalizedColumns);
+      return;
+    }
+
+    const patient = normalizeBulkPatientRow(normalizedColumns, headerMap);
+    if (!patient.name || !patient.address) {
+      result.errors.push(`${index + 1}行目: 利用者名または住所がありません。`);
+      return;
+    }
+    result.valid.push(patient);
+  });
+
+  return result;
+}
+
+function parseCsvLine(line) {
+  const cells = [];
+  let current = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === '"' && line[index + 1] === '"') {
+      current += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === "," && !quoted) {
+      cells.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  cells.push(current);
+  return cells;
+}
+
+function looksLikeBulkHeader(columns) {
+  return columns.some((column) => /利用者|氏名|名前|お名前|住所|車いす|車椅子/.test(column));
+}
+
+function createBulkHeaderMap(columns) {
+  const map = {};
+  columns.forEach((column, index) => {
+    const value = normalizeText(column);
+    if (/利用者名|氏名|名前|お名前/.test(value)) map.name = index;
+    if (/住所|所在地|送迎先/.test(value)) map.address = index;
+    if (/人数|利用人数|座席人数/.test(value)) map.passengers = index;
+    if (/車いす|車イス|車椅子/.test(value)) map.wheelchair = index;
+    if (/何時以降|開始|以降|希望開始/.test(value)) map.earliest = index;
+    if (/何時まで|終了|まで|希望終了/.test(value)) map.latest = index;
+  });
+  return map;
+}
+
+function normalizeBulkPatientRow(columns, headerMap) {
+  const pick = (key, fallbackIndex) => columns[headerMap?.[key] ?? fallbackIndex] || "";
+  return {
+    id: makeId(),
+    name: pick("name", 0).trim(),
+    address: pick("address", 1).trim(),
+    passengers: normalizePassengerCount(pick("passengers", 2)),
+    wheelchair: normalizeWheelchairValue(pick("wheelchair", 3)),
+    earliest: normalizeTimeValue(pick("earliest", 4)),
+    latest: normalizeTimeValue(pick("latest", 5)),
+  };
+}
+
+function normalizePassengerCount(value) {
+  const count = Number(String(value || "").replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(count) || count < 1) return 1;
+  return Math.max(1, Math.min(8, Math.round(count)));
+}
+
+function normalizeWheelchairValue(value) {
+  return /あり|有|必要|車いす|車イス|車椅子|○|◯|〇|1|true|yes/i.test(String(value || ""));
+}
+
+function normalizeTimeValue(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const normalized = text.replace("：", ":").replace(/[時分]/g, ":").replace(/:+$/, "");
+  const match = normalized.match(/^(\d{1,2})(?::?(\d{2}))?$/);
+  if (!match) return "";
+  const hour = Number(match[1]);
+  const minute = Number(match[2] || 0);
+  if (hour > 23 || minute > 59) return "";
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function renderBulkPreview(rows) {
+  if (!rows.valid.length && !rows.errors.length) {
+    els.bulkImportPreview.textContent = "貼り付け内容が空です。";
+    return;
+  }
+  const previewRows = rows.valid.slice(0, 20).map((patient) => `
+    <tr>
+      <td>${escapeHtml(patient.name)}</td>
+      <td>${escapeHtml(patient.address)}</td>
+      <td>${patient.passengers}</td>
+      <td>${patient.wheelchair ? "あり" : "なし"}</td>
+      <td>${escapeHtml(formatWindow(patient))}</td>
+    </tr>
+  `).join("");
+  const errorHtml = rows.errors.length ? `<p>${escapeHtml(rows.errors.slice(0, 5).join(" / "))}</p>` : "";
+  els.bulkImportPreview.innerHTML = `
+    <strong>${rows.valid.length}名を取り込み候補にしました。</strong>
+    ${errorHtml}
+    <table>
+      <thead><tr><th>利用者名</th><th>住所</th><th>人数</th><th>車いす</th><th>時間</th></tr></thead>
+      <tbody>${previewRows}</tbody>
+    </table>
+  `;
+}
+
 function resetRegistryForm() {
   editingRegistryId = null;
   els.registryForm.reset();
@@ -912,7 +1194,7 @@ async function optimizeRoute(options = {}) {
   const validation = validatePlan();
   if (validation.blockers.length) {
     renderBlockingResult(validation.blockers, validation.warnings);
-    setStatus("定員または車椅子対応を確認してください。", true);
+    setStatus("定員または車いす対応を確認してください。", true);
     return;
   }
 
@@ -947,23 +1229,27 @@ async function optimizeRoute(options = {}) {
 function validatePlan() {
   const vehicle = getVehicle();
   const totalPassengers = getTotalPassengers();
-  const wheelchairCount = state.patients.filter((patient) => patient.wheelchair).length;
+  const seatedPassengers = getSeatedPassengers();
+  const wheelchairCount = getWheelchairCount();
   const blockers = [];
   const warnings = [];
 
   if (!state.startAddress) blockers.push("出発地を入力してください。");
   if (!state.patients.length) blockers.push("患者様を1名以上追加してください。");
-  if (totalPassengers > vehicle.capacity) {
-    blockers.push(`${vehicle.name}の定員は${vehicle.capacity}名です。現在は合計${totalPassengers}名です。`);
+  if (seatedPassengers > vehicle.capacity) {
+    blockers.push(`${vehicle.name}の座席利用は${vehicle.capacity}名までです。現在は座席利用${seatedPassengers}名です。`);
   }
   if (wheelchairCount && !vehicle.wheelchair) {
-    blockers.push("車椅子対応が必要な患者様がいます。2号車を選んでください。");
+    blockers.push("車いす利用の方がいます。1号車または2号車を選んでください。");
+  }
+  if (wheelchairCount > (vehicle.wheelchairCapacity || 0)) {
+    blockers.push(`${vehicle.name}の車いす対応は${vehicle.wheelchairCapacity || 0}台までです。現在は${wheelchairCount}台です。`);
   }
   if (state.patients.some((patient) => patient.earliest && patient.latest && timeToMinutes(patient.earliest) > timeToMinutes(patient.latest))) {
     blockers.push("時間制約の開始時刻が終了時刻より後になっている患者様がいます。");
   }
-  if (totalPassengers > 4 && vehicle.id !== "car3") {
-    warnings.push("合計5名以上の送迎です。通常運用では3号車の利用も検討してください。");
+  if (!wheelchairCount && totalPassengers > 5 && vehicle.id !== "car3") {
+    warnings.push("座席利用が6名以上の送迎です。3号車の利用を検討してください。");
   }
   warnings.push("無料モードです。3分ごとの道路ルート再取得と時間帯補正で、できるだけ現在状況に近づけます。");
   return { blockers, warnings };
@@ -1166,7 +1452,7 @@ function renderRoute(start, plan, end, route, warnings) {
   els.resultPanel.innerHTML = `
     <div class="summary-grid">
       <div class="summary-card"><span>車両</span><strong>${escapeHtml(vehicle.name)}</strong></div>
-      <div class="summary-card"><span>人数</span><strong>${getTotalPassengers()} / ${vehicle.capacity}名</strong></div>
+      <div class="summary-card"><span>人数</span><strong>${getCapacitySummary(vehicle)}</strong></div>
       <div class="summary-card"><span>距離</span><strong>${distanceKm.toFixed(1)}km</strong></div>
       <div class="summary-card"><span>目安</span><strong>${durationMinutes}分</strong></div>
     </div>
@@ -1307,9 +1593,24 @@ function getTotalPassengers() {
   return state.patients.reduce((sum, patient) => sum + Number(patient.passengers || 1), 0);
 }
 
+function getWheelchairCount() {
+  return state.patients.filter((patient) => patient.wheelchair).length;
+}
+
+function getSeatedPassengers() {
+  return state.patients.reduce((sum, patient) => {
+    return patient.wheelchair ? sum : sum + Number(patient.passengers || 1);
+  }, 0);
+}
+
+function getCapacitySummary(vehicle) {
+  return `座席${getSeatedPassengers()}/${vehicle.capacity}・車いす${getWheelchairCount()}/${vehicle.wheelchairCapacity || 0}`;
+}
+
 function getCapacityMessage(vehicle) {
-  if (getTotalPassengers() > vehicle.capacity) return "定員超過";
-  if (state.patients.some((patient) => patient.wheelchair) && !vehicle.wheelchair) return "車椅子対応車を選択";
+  if (getSeatedPassengers() > vehicle.capacity) return "座席定員超過";
+  if (getWheelchairCount() > (vehicle.wheelchairCapacity || 0)) return "車いす台数超過";
+  if (state.patients.some((patient) => patient.wheelchair) && !vehicle.wheelchair) return "車いす対応車を選択";
   return "定員内";
 }
 

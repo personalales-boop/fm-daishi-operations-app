@@ -28,7 +28,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -118,6 +119,53 @@ button {
   font-size: 0.86rem;
   font-weight: 800;
   line-height: 1.45;
+}
+
+.security-checklist {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.security-checklist:empty {
+  display: none;
+}
+
+.security-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 860px;
+  padding: 8px 10px;
+  color: var(--ink);
+  background: #f4f9ff;
+  border: 1px solid #d7e8fb;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.security-item.warning {
+  background: #fff7e8;
+  border-color: #f1d39a;
+}
+
+.security-mark {
+  display: inline-grid;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: #ffffff;
+  background: var(--green);
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.security-item.warning .security-mark {
+  background: var(--amber);
 }
 
 .login-form {
@@ -281,7 +329,8 @@ label span {
   font-weight: 900;
 }
 
-input {
+input,
+textarea {
   width: 100%;
   min-height: 48px;
   padding: 10px 12px;
@@ -289,6 +338,12 @@ input {
   background: #ffffff;
   border: 1px solid #cfd8e3;
   border-radius: 12px;
+}
+
+textarea {
+  min-height: 150px;
+  resize: vertical;
+  line-height: 1.5;
 }
 
 select {
@@ -431,6 +486,71 @@ select:focus {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 10px;
+}
+
+.bulk-import-panel {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f7fbff;
+  border: 1px solid #d7e8fb;
+  border-radius: 14px;
+}
+
+.bulk-import-panel summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 950;
+}
+
+.bulk-import-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.bulk-import-body p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.bulk-import-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.7fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.bulk-preview {
+  min-height: 46px;
+  padding: 10px;
+  overflow-x: auto;
+  color: var(--text);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.bulk-preview table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+}
+
+.bulk-preview th,
+.bulk-preview td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.bulk-preview th {
+  color: var(--ink);
+  background: var(--surface-soft);
 }
 
 .registry-form-actions {
@@ -733,6 +853,7 @@ select:focus {
   .form-row,
   .vehicle-grid,
   .quick-actions,
+  .bulk-import-tools,
   .route-action-row,
   .summary-grid {
     grid-template-columns: 1fr;

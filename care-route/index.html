@@ -28,6 +28,7 @@
           <p class="eyebrow">セキュリティ</p>
           <h2 id="securityTitle">本番セキュリティ確認</h2>
           <span id="securityStatus">接続状態を確認しています。</span>
+          <div class="security-checklist" id="securityChecklist"></div>
         </div>
         <form class="login-form" id="loginForm" hidden>
           <label>
@@ -90,7 +91,7 @@
                 <span class="step-badge">2</span>
                 <div>
                   <p>車両選択</p>
-                  <h2>定員と車椅子</h2>
+                  <h2>定員と車いす</h2>
                 </div>
               </div>
               <div class="vehicle-grid" id="vehicleGrid"></div>
@@ -129,7 +130,7 @@
                 </div>
                 <label class="check-line">
                   <input id="patientWheelchair" type="checkbox" />
-                  <span>車椅子対応が必要</span>
+                  <span>車いす利用</span>
                 </label>
                 <button class="secondary-button" type="submit">今日の送迎に追加</button>
               </form>
@@ -208,7 +209,7 @@
                 </div>
                 <label class="check-line">
                   <input id="registryWheelchair" type="checkbox" />
-                  <span>車椅子対応が必要</span>
+                  <span>車いす利用</span>
                 </label>
                 <div class="registry-form-actions">
                   <button class="secondary-button" id="registrySubmitButton" type="submit">顧客を登録</button>
@@ -219,6 +220,26 @@
                 <button class="ghost-button" id="importPatientsButton" type="button">今日の送迎から登録</button>
                 <button class="ghost-button" id="clearRegistryFormButton" type="button">入力をクリア</button>
               </div>
+              <details class="bulk-import-panel" open>
+                <summary>Excel一覧からまとめて登録</summary>
+                <div class="bulk-import-body">
+                  <p>Excelから表をコピーして貼り付けるか、CSVファイルを選んでください。列は「利用者名、住所、人数、車いす、何時以降、何時まで」の順で取り込めます。</p>
+                  <textarea id="bulkImportText" rows="7" placeholder="利用者名&#9;住所&#9;人数&#9;車いす&#9;何時以降&#9;何時まで&#10;田中様&#9;川崎市川崎区大師町10-6&#9;1&#9;なし&#9;09:00&#9;10:00"></textarea>
+                  <div class="bulk-import-tools">
+                    <input id="bulkImportFile" type="file" accept=".csv,.txt,text/csv,text/plain" />
+                    <label class="check-line compact-check">
+                      <input id="bulkAddToRoute" type="checkbox" checked />
+                      <span>登録後、今日の送迎にも追加</span>
+                    </label>
+                  </div>
+                  <div class="quick-actions">
+                    <button class="ghost-button" id="bulkTemplateButton" type="button">Excel用ひな形コピー</button>
+                    <button class="ghost-button" id="bulkPreviewButton" type="button">内容を確認</button>
+                    <button class="secondary-button" id="bulkCommitButton" type="button" disabled>確認した内容を登録</button>
+                  </div>
+                  <div class="bulk-preview" id="bulkImportPreview">貼り付け後に「内容を確認」を押してください。</div>
+                </div>
+              </details>
               <div class="patient-list" id="registryList"></div>
             </section>
           </section>
