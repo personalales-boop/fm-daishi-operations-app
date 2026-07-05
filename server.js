@@ -32,6 +32,8 @@ const CARE_ROUTE_RETENTION = {
   routeDraftDays: readPositiveNumber(process.env.CARE_ROUTE_ROUTE_DRAFT_DAYS, 90),
   auditDays: readPositiveNumber(process.env.CARE_ROUTE_AUDIT_DAYS, 730),
 };
+const CARE_ROUTE_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const CARE_ROUTE_RETURN_TYPES = new Set(["normal", "early"]);
 
 const scheduleMasters = loadScheduleMasters();
 const defaultShiftSlots = createDefaultShiftSlots();
@@ -729,6 +731,40 @@ async function handleCareRouteApi(req, res, url, user) {
     writeCareRouteStore(careRouteStore);
     sendJson(res, 200, {
       customers: getCareRouteCustomersForUser(user),
+      auditLog: canManageCareRoute(user) ? careRouteStore.auditLog.slice(0, 120) : [],
+    });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/care-route/daily-plan") {
+    const date = String(url.searchParams.get("date") || "");
+    if (!isValidDate(date)) {
+      sendJson(res, 400, { error: "日付が正しくありません。" });
+      return;
+    }
+    sendJson(res, 200, {
+      plan: getCareRouteDailyPlan(date),
+      careRole: getCareRouteRole(user),
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/care-route/daily-plan") {
+    if (!canEditCareRouteCustomers(user)) {
+      sendJson(res, 403, { error: "当日の搭乗者一覧を編集する権限がありません。" });
+      return;
+    }
+
+    const body = await readJsonBody(req);
+    const result = upsertCareRouteDailyPlan(body, user);
+    if (result.error) {
+      sendJson(res, result.status || 400, { error: result.error });
+      return;
+    }
+
+    writeCareRouteStore(careRouteStore);
+    sendJson(res, 200, {
+      plan: result.plan,
       auditLog: canManageCareRoute(user) ? careRouteStore.auditLog.slice(0, 120) : [],
     });
     return;
@@ -1757,7 +1793,7 @@ function normalizeCareRouteStore(value) {
     version: Number(value.version || 1),
     customers: Array.isArray(value.customers) ? value.customers.map(normalizeCareRouteCustomer).filter(Boolean) : [],
     deletedCustomers: Array.isArray(value.deletedCustomers) ? value.deletedCustomers : [],
-    routeDrafts: Array.isArray(value.routeDrafts) ? value.routeDrafts : [],
+    routeDrafts: Array.isArray(value.routeDrafts) ? value.routeDrafts.map(normalizeCareRouteDailyPlan).filter(Boolean) : [],
     auditLog: Array.isArray(value.auditLog) ? value.auditLog : [],
     policy: { ...createCareRoutePolicy(), ...(value.policy || {}) },
     updatedAt: value.updatedAt || new Date().toISOString(),
@@ -1785,6 +1821,7 @@ function normalizeCareRouteCustomer(customer) {
     wheelchair: Boolean(customer.wheelchair),
     earliest: String(customer.earliest || ""),
     latest: String(customer.latest || ""),
+    weeklySchedule: normalizeCareRouteWeeklySchedule(customer.weeklySchedule),
     createdAt: customer.createdAt || new Date().toISOString(),
     createdBy: String(customer.createdBy || ""),
     createdByName: String(customer.createdByName || ""),
@@ -2475,7 +2512,119 @@ function normalizeCareRouteCustomerInput(body) {
     wheelchair: Boolean(body.wheelchair),
     earliest,
     latest,
+    weeklySchedule: normalizeCareRouteWeeklySchedule(body.weeklySchedule),
   };
+}
+
+function normalizeCareRouteWeeklySchedule(value) {
+  const schedule = {};
+  if (!value || typeof value !== "object") return schedule;
+  CARE_ROUTE_WEEKDAYS.forEach((weekday) => {
+    const returnType = normalizeCareRouteReturnType(value[weekday]);
+    if (returnType) schedule[weekday] = returnType;
+  });
+  return schedule;
+}
+
+function normalizeCareRouteReturnType(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return "";
+  if (text === "early" || text === "2" || /13|早|短|午後/.test(text)) return "early";
+  if (text === "normal" || text === "1" || /16|通常|普通|標準/.test(text)) return "normal";
+  return CARE_ROUTE_RETURN_TYPES.has(text) ? text : "";
+}
+
+function normalizeCareRouteDailyPlan(plan) {
+  if (!plan || !isValidDate(plan.date)) return null;
+  const returnOverrides = {};
+  Object.entries(plan.returnOverrides || {}).forEach(([customerId, value]) => {
+    const id = String(customerId || "").trim();
+    const returnType = normalizeCareRouteReturnType(value);
+    if (id && returnType) returnOverrides[id] = returnType;
+  });
+  return {
+    id: String(plan.id || `daily-${plan.date}`),
+    date: String(plan.date),
+    absentCustomerIds: uniqueCareRouteIds(plan.absentCustomerIds),
+    returnOverrides,
+    extraCustomerIds: uniqueCareRouteIds(plan.extraCustomerIds),
+    createdAt: plan.createdAt || new Date().toISOString(),
+    createdBy: String(plan.createdBy || ""),
+    createdByName: String(plan.createdByName || ""),
+    updatedAt: plan.updatedAt || new Date().toISOString(),
+    updatedBy: String(plan.updatedBy || ""),
+    updatedByName: String(plan.updatedByName || ""),
+  };
+}
+
+function uniqueCareRouteIds(value) {
+  return [...new Set(Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [])];
+}
+
+function getCareRouteDailyPlan(date) {
+  const existing = careRouteStore.routeDrafts.find((plan) => plan.date === date);
+  return existing ? { ...existing } : createEmptyCareRouteDailyPlan(date);
+}
+
+function createEmptyCareRouteDailyPlan(date) {
+  const now = new Date().toISOString();
+  return {
+    id: `daily-${date}`,
+    date,
+    absentCustomerIds: [],
+    returnOverrides: {},
+    extraCustomerIds: [],
+    createdAt: now,
+    createdBy: "",
+    createdByName: "",
+    updatedAt: now,
+    updatedBy: "",
+    updatedByName: "",
+  };
+}
+
+function upsertCareRouteDailyPlan(body, user) {
+  const date = String(body.date || "").trim();
+  if (!isValidDate(date)) return { status: 400, error: "日付が正しくありません。" };
+
+  const normalized = normalizeCareRouteDailyPlan({
+    ...body,
+    id: String(body.id || `daily-${date}`),
+    date,
+  });
+  if (!normalized) return { status: 400, error: "当日の搭乗者一覧を保存できませんでした。" };
+
+  const validCustomerIds = new Set(careRouteStore.customers.map((customer) => customer.id));
+  normalized.absentCustomerIds = normalized.absentCustomerIds.filter((id) => validCustomerIds.has(id));
+  normalized.extraCustomerIds = normalized.extraCustomerIds.filter((id) => validCustomerIds.has(id));
+  Object.keys(normalized.returnOverrides).forEach((id) => {
+    if (!validCustomerIds.has(id)) delete normalized.returnOverrides[id];
+  });
+
+  const existingIndex = careRouteStore.routeDrafts.findIndex((plan) => plan.date === date);
+  const existing = existingIndex >= 0 ? careRouteStore.routeDrafts[existingIndex] : null;
+  const nextPlan = {
+    ...normalized,
+    id: existing?.id || normalized.id,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    createdBy: existing?.createdBy || user.id,
+    createdByName: existing?.createdByName || user.name,
+    updatedAt: new Date().toISOString(),
+    updatedBy: user.id,
+    updatedByName: user.name,
+  };
+
+  if (existingIndex >= 0) careRouteStore.routeDrafts[existingIndex] = nextPlan;
+  else careRouteStore.routeDrafts.unshift(nextPlan);
+
+  careRouteAudit(
+    user,
+    "当日搭乗者更新",
+    `${date}の欠席${nextPlan.absentCustomerIds.length}名、当日追加${nextPlan.extraCustomerIds.length}名を保存しました。`,
+    "daily-plan",
+    date,
+  );
+  return { plan: nextPlan };
 }
 
 function deleteCareRouteCustomer(id, user) {
@@ -2484,6 +2633,16 @@ function deleteCareRouteCustomer(id, user) {
   if (!customer) return { status: 404, error: "対象の顧客が見つかりません。" };
 
   careRouteStore.customers = careRouteStore.customers.filter((item) => item.id !== customerId);
+  careRouteStore.routeDrafts = careRouteStore.routeDrafts.map((plan) => {
+    const returnOverrides = { ...(plan.returnOverrides || {}) };
+    delete returnOverrides[customerId];
+    return {
+      ...plan,
+      absentCustomerIds: uniqueCareRouteIds(plan.absentCustomerIds).filter((id) => id !== customerId),
+      returnOverrides,
+      extraCustomerIds: uniqueCareRouteIds(plan.extraCustomerIds).filter((id) => id !== customerId),
+    };
+  });
   careRouteStore.deletedCustomers.unshift({
     ...customer,
     deletedAt: new Date().toISOString(),

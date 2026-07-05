@@ -101,8 +101,36 @@
               <div class="section-title">
                 <span class="step-badge">3</span>
                 <div>
+                  <p>今日の搭乗者一覧</p>
+                  <h2>曜日予定から作成</h2>
+                </div>
+              </div>
+              <div class="roster-toolbar">
+                <label>
+                  <span>対象日</span>
+                  <input id="serviceDate" type="date" />
+                </label>
+                <button class="ghost-button" id="refreshTodayRosterButton" type="button">一覧を更新</button>
+              </div>
+              <div class="extra-roster-tools">
+                <label>
+                  <span>当日だけ追加する利用者</span>
+                  <select id="extraTodayPatientSelect">
+                    <option value="">登録済み顧客から選択</option>
+                  </select>
+                </label>
+                <button class="ghost-button" id="addExtraTodayPatientButton" type="button">当日だけ追加</button>
+              </div>
+              <div class="today-roster-list" id="todayRosterList"></div>
+              <button class="secondary-button" id="applyTodayRosterButton" type="button">今日の送迎に反映</button>
+            </section>
+
+            <section class="panel-card">
+              <div class="section-title">
+                <span class="step-badge">4</span>
+                <div>
                   <p>今日の送迎</p>
-                  <h2>送迎対象を追加</h2>
+                  <h2>直接入力で追加</h2>
                 </div>
               </div>
               <form class="patient-form" id="patientForm">
@@ -217,6 +245,68 @@
                   <input id="registryWheelchair" type="checkbox" />
                   <span>車いす利用</span>
                 </label>
+                <fieldset class="weekly-schedule">
+                  <legend>基本利用曜日・帰り時間</legend>
+                  <p>来所する曜日だけチェックし、通常帰りか13時半帰りを選択してください。</p>
+                  <div class="weekday-schedule-grid">
+                    <label class="weekday-schedule-row">
+                      <input type="checkbox" data-weekday-enabled="mon" />
+                      <span>月</span>
+                      <select data-weekday-return="mon">
+                        <option value="normal">通常 16:30帰り</option>
+                        <option value="early">13:30帰り</option>
+                      </select>
+                    </label>
+                    <label class="weekday-schedule-row">
+                      <input type="checkbox" data-weekday-enabled="tue" />
+                      <span>火</span>
+                      <select data-weekday-return="tue">
+                        <option value="normal">通常 16:30帰り</option>
+                        <option value="early">13:30帰り</option>
+                      </select>
+                    </label>
+                    <label class="weekday-schedule-row">
+                      <input type="checkbox" data-weekday-enabled="wed" />
+                      <span>水</span>
+                      <select data-weekday-return="wed">
+                        <option value="normal">通常 16:30帰り</option>
+                        <option value="early">13:30帰り</option>
+                      </select>
+                    </label>
+                    <label class="weekday-schedule-row">
+                      <input type="checkbox" data-weekday-enabled="thu" />
+                      <span>木</span>
+                      <select data-weekday-return="thu">
+                        <option value="normal">通常 16:30帰り</option>
+                        <option value="early">13:30帰り</option>
+                      </select>
+                    </label>
+                    <label class="weekday-schedule-row">
+                      <input type="checkbox" data-weekday-enabled="fri" />
+                      <span>金</span>
+                      <select data-weekday-return="fri">
+                        <option value="normal">通常 16:30帰り</option>
+                        <option value="early">13:30帰り</option>
+                      </select>
+                    </label>
+                    <label class="weekday-schedule-row">
+                      <input type="checkbox" data-weekday-enabled="sat" />
+                      <span>土</span>
+                      <select data-weekday-return="sat">
+                        <option value="normal">通常 16:30帰り</option>
+                        <option value="early">13:30帰り</option>
+                      </select>
+                    </label>
+                    <label class="weekday-schedule-row">
+                      <input type="checkbox" data-weekday-enabled="sun" />
+                      <span>日</span>
+                      <select data-weekday-return="sun">
+                        <option value="normal">通常 16:30帰り</option>
+                        <option value="early">13:30帰り</option>
+                      </select>
+                    </label>
+                  </div>
+                </fieldset>
                 <div class="registry-form-actions">
                   <button class="secondary-button" id="registrySubmitButton" type="submit">顧客を登録</button>
                   <button class="ghost-button" id="registryCancelEditButton" type="button" hidden>編集をやめる</button>
@@ -229,8 +319,8 @@
               <details class="bulk-import-panel" open>
                 <summary>Excel一覧からまとめて登録</summary>
                 <div class="bulk-import-body">
-                  <p>Excelから表をコピーして貼り付けるか、CSVファイルを選んでください。列は「利用者名、住所、人数、車いす、何時以降、何時まで」の順で取り込めます。</p>
-                  <textarea id="bulkImportText" rows="7" placeholder="利用者名&#9;住所&#9;人数&#9;車いす&#9;何時以降&#9;何時まで&#10;田中様&#9;川崎市川崎区大師町10-6&#9;1&#9;なし&#9;09:00&#9;10:00"></textarea>
+                  <p>Excelから表をコピーして貼り付けるか、CSVファイルを選んでください。列は「利用者名、住所、人数、車いす、何時以降、何時まで、利用曜日、帰り区分」の順で取り込めます。曜日は「月,水,金」または「月:通常,水:13:30」のように入力できます。</p>
+                  <textarea id="bulkImportText" rows="7" placeholder="利用者名&#9;住所&#9;人数&#9;車いす&#9;何時以降&#9;何時まで&#9;利用曜日&#9;帰り区分&#10;田中様&#9;川崎市川崎区大師町10-6&#9;1&#9;なし&#9;&#9;&#9;月,水,金&#9;通常"></textarea>
                   <div class="bulk-import-tools">
                     <input id="bulkImportFile" type="file" accept=".csv,.txt,text/csv,text/plain" />
                     <label class="check-line compact-check">

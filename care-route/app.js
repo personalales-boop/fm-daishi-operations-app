@@ -19,6 +19,21 @@ const vehicles = [
   { id: "car4", name: "4号車", capacity: 5, wheelchair: false, wheelchairCapacity: 0, note: "座席5名 / 車いす不可" },
 ];
 
+const weekdays = [
+  { id: "mon", label: "月", day: 1 },
+  { id: "tue", label: "火", day: 2 },
+  { id: "wed", label: "水", day: 3 },
+  { id: "thu", label: "木", day: 4 },
+  { id: "fri", label: "金", day: 5 },
+  { id: "sat", label: "土", day: 6 },
+  { id: "sun", label: "日", day: 0 },
+];
+
+const returnTypes = {
+  normal: { label: "通常", time: "16:30", earliest: "16:30", latest: "17:00" },
+  early: { label: "13:30帰り", time: "13:30", earliest: "13:30", latest: "14:00" },
+};
+
 const finalReviewLoginUsers = [
   { id: "review_admin", name: "管理者", permission: "admin", pin: "0000", color: "#0b72d9" },
   { id: "review_dispatcher", name: "配車担当", permission: "staff", pin: "1111", color: "#098a65" },
@@ -79,6 +94,12 @@ const els = {
   useLocationButton: document.getElementById("useLocationButton"),
   useNowTime: document.getElementById("useNowTime"),
   vehicleGrid: document.getElementById("vehicleGrid"),
+  serviceDate: document.getElementById("serviceDate"),
+  refreshTodayRosterButton: document.getElementById("refreshTodayRosterButton"),
+  extraTodayPatientSelect: document.getElementById("extraTodayPatientSelect"),
+  addExtraTodayPatientButton: document.getElementById("addExtraTodayPatientButton"),
+  todayRosterList: document.getElementById("todayRosterList"),
+  applyTodayRosterButton: document.getElementById("applyTodayRosterButton"),
   patientForm: document.getElementById("patientForm"),
   registeredPatientSelect: document.getElementById("registeredPatientSelect"),
   registeredPatientNameList: document.getElementById("registeredPatientNameList"),
@@ -99,6 +120,8 @@ const els = {
   registryWheelchair: document.getElementById("registryWheelchair"),
   registrySubmitButton: document.getElementById("registrySubmitButton"),
   registryCancelEditButton: document.getElementById("registryCancelEditButton"),
+  weekdayEnabledInputs: document.querySelectorAll("[data-weekday-enabled]"),
+  weekdayReturnSelects: document.querySelectorAll("[data-weekday-return]"),
   importPatientsButton: document.getElementById("importPatientsButton"),
   clearRegistryFormButton: document.getElementById("clearRegistryFormButton"),
   registryList: document.getElementById("registryList"),
@@ -144,6 +167,7 @@ async function boot() {
   renderAppTabs();
   renderPatients();
   renderRegisteredPatients();
+  renderTodayRoster();
   syncAutoRefresh();
   await initSecureBackend();
 }
@@ -177,6 +201,18 @@ function bindEvents() {
     state.useNowTime = els.useNowTime.checked;
     persist();
   });
+  els.serviceDate.addEventListener("change", () => {
+    state.serviceDate = els.serviceDate.value || getTodayIsoDate();
+    persist();
+    void loadDailyPlanForDate(state.serviceDate);
+  });
+  els.refreshTodayRosterButton.addEventListener("click", () => {
+    void loadDailyPlanForDate(state.serviceDate || getTodayIsoDate());
+  });
+  els.todayRosterList.addEventListener("change", handleTodayRosterChange);
+  els.todayRosterList.addEventListener("click", handleTodayRosterClick);
+  els.addExtraTodayPatientButton.addEventListener("click", addExtraTodayPatient);
+  els.applyTodayRosterButton.addEventListener("click", applyTodayRosterToRoute);
   els.registeredPatientSelect.addEventListener("change", () => {
     applyRegisteredPatientToForm(els.registeredPatientSelect.value, { status: true });
   });
@@ -192,6 +228,7 @@ function bindEvents() {
   els.importPatientsButton.addEventListener("click", registerCurrentPatients);
   els.clearRegistryFormButton.addEventListener("click", resetRegistryForm);
   els.registryCancelEditButton.addEventListener("click", resetRegistryForm);
+  els.weekdayEnabledInputs.forEach((input) => input.addEventListener("change", syncWeeklyScheduleSelects));
   els.bulkTemplateButton.addEventListener("click", copyBulkTemplate);
   els.bulkPreviewButton.addEventListener("click", previewBulkImport);
   els.bulkCommitButton.addEventListener("click", commitBulkImport);
@@ -252,6 +289,7 @@ function syncInputsFromState() {
   els.endAddress.value = state.endAddress;
   els.startTime.value = state.startTime;
   els.useNowTime.checked = state.useNowTime !== false;
+  els.serviceDate.value = state.serviceDate || getTodayIsoDate();
 }
 
 async function initSecureBackend() {
@@ -394,6 +432,7 @@ function lockAppForLogin(message = "ログインしてください。") {
     state.registeredPatients = [];
     renderPatients();
     renderRegisteredPatients();
+    renderTodayRoster();
     persist();
   }
   setAppInteractive(false);
@@ -411,6 +450,9 @@ function setAppInteractive(enabled) {
   });
   [
     els.useLocationButton,
+    els.refreshTodayRosterButton,
+    els.addExtraTodayPatientButton,
+    els.applyTodayRosterButton,
     els.clearPatientsButton,
     els.optimizeButton,
     els.autoRefreshButton,
@@ -422,7 +464,7 @@ function setAppInteractive(enabled) {
   ].forEach((button) => {
     if (button) button.disabled = !enabled;
   });
-  [els.bulkImportText, els.bulkImportFile, els.bulkAddToRoute].forEach((element) => {
+  [els.serviceDate, els.extraTodayPatientSelect, els.bulkImportText, els.bulkImportFile, els.bulkAddToRoute].forEach((element) => {
     if (element) element.disabled = !enabled;
   });
   if (!enabled) els.googleMapsButton.disabled = true;
@@ -434,6 +476,7 @@ async function loadSecureCareRouteState() {
   persist();
   renderRegisteredPatients();
   syncRegisteredPatientInputs();
+  await loadDailyPlanForDate(state.serviceDate || getTodayIsoDate(), { silent: true });
 }
 
 function applyCareRolePermissions() {
@@ -466,6 +509,7 @@ function applyLocalSession(user) {
   els.sessionUserName.textContent = `${currentUser.name} / ${getCareRoleLabel(careRole)}`;
   applyCareRolePermissions();
   renderRegisteredPatients();
+  renderTodayRoster();
   setStatus("ログインしました。");
 }
 
@@ -681,6 +725,7 @@ function renderRegisteredPatients() {
     : [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja"));
 
   syncRegisteredPatientInputs(registeredPatients);
+  syncExtraTodayPatientSelect(registeredPatients);
 
   if (!registeredPatients.length) {
     els.registryList.innerHTML = `
@@ -691,6 +736,7 @@ function renderRegisteredPatients() {
         </div>
       </div>
     `;
+    renderTodayRoster();
     return;
   }
 
@@ -707,6 +753,7 @@ function renderRegisteredPatients() {
           <strong>${escapeHtml(patient.name)} ${patient.wheelchair ? "・車いす" : ""}</strong>
           <span>${escapeHtml(patient.address)}</span>
           <span>${escapeHtml(formatWindow(patient))} / ${patient.passengers}名</span>
+          <span>${escapeHtml(formatWeeklyScheduleSummary(patient.weeklySchedule))}</span>
         </div>
         <div class="card-actions">
           <button class="call-button" type="button" data-call-registry="${escapeHtml(patient.id)}">呼び出す</button>
@@ -718,6 +765,7 @@ function renderRegisteredPatients() {
       </article>
     `).join("")}
   `;
+  renderTodayRoster();
 }
 
 function syncRegisteredPatientInputs(list = null) {
@@ -741,6 +789,291 @@ function syncRegisteredPatientInputs(list = null) {
 
 function buildRegisteredPatientOptionLabel(patient) {
   return `${patient.name}${patient.wheelchair ? " / 車いす" : ""} / ${patient.address}`;
+}
+
+function syncExtraTodayPatientSelect(list = null) {
+  const registeredPatients = list || (careRole === "driver"
+    ? []
+    : [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja")));
+  const currentValue = els.extraTodayPatientSelect.value;
+  els.extraTodayPatientSelect.innerHTML = `
+    <option value="">登録済み顧客から選択</option>
+    ${registeredPatients.map((patient) => `
+      <option value="${escapeHtml(patient.id)}">${escapeHtml(patient.name)} / ${escapeHtml(patient.address)}</option>
+    `).join("")}
+  `;
+  els.extraTodayPatientSelect.value = registeredPatients.some((patient) => patient.id === currentValue) ? currentValue : "";
+  els.extraTodayPatientSelect.disabled = registeredPatients.length === 0 || !currentUser;
+}
+
+function renderTodayRoster() {
+  if (!els.todayRosterList) return;
+  const date = state.serviceDate || getTodayIsoDate();
+  state.serviceDate = date;
+  els.serviceDate.value = date;
+  const weekday = getWeekdayForDate(date);
+  const plan = getDailyPlan(date);
+  const entries = getTodayRosterEntries(date);
+  const scheduledCount = state.registeredPatients.filter((patient) => normalizeWeeklySchedule(patient.weeklySchedule)[weekday.id]).length;
+
+  if (!currentUser) {
+    els.todayRosterList.innerHTML = `
+      <div class="roster-empty">
+        <strong>ログイン後に今日の搭乗者一覧を表示します</strong>
+        <span>登録済み顧客の基本曜日から、対象日の一覧を作成します。</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (!entries.length) {
+    els.todayRosterList.innerHTML = `
+      <div class="roster-empty">
+        <strong>${escapeHtml(formatDateForRoster(date))}（${weekday.label}）の基本予定は未登録です</strong>
+        <span>顧客登録で利用曜日を設定するか、「当日だけ追加する利用者」から追加してください。</span>
+      </div>
+    `;
+    return;
+  }
+
+  const activeCount = entries.filter((entry) => !entry.absent).length;
+  const extraCount = entries.filter((entry) => entry.isExtra).length;
+  els.todayRosterList.innerHTML = `
+    <div class="roster-summary">
+      <strong>${escapeHtml(formatDateForRoster(date))}（${weekday.label}）: 搭乗予定 ${activeCount}名</strong>
+      <span>基本予定 ${scheduledCount}名 / 当日追加 ${extraCount}名。来ない方は欠席にチェックしてください。</span>
+    </div>
+    ${entries.map((entry) => `
+      <article class="roster-row ${entry.absent ? "is-absent" : ""}">
+        <div class="roster-main">
+          <strong>${escapeHtml(entry.patient.name)} ${entry.patient.wheelchair ? "・車いす" : ""}</strong>
+          <span>${escapeHtml(entry.patient.address)}</span>
+          <span class="roster-status">${entry.isExtra ? "当日追加" : "基本予定"} / ${escapeHtml(returnTypes[entry.returnType]?.label || returnTypes.normal.label)} ${escapeHtml(returnTypes[entry.returnType]?.time || returnTypes.normal.time)}</span>
+        </div>
+        <div class="roster-controls">
+          <label class="check-line compact-check">
+            <input type="checkbox" data-roster-absent="${escapeHtml(entry.patient.id)}" ${entry.absent ? "checked" : ""} />
+            <span>本日来ない</span>
+          </label>
+          <label>
+            <span>本日の帰り</span>
+            <select data-roster-return="${escapeHtml(entry.patient.id)}" ${entry.absent ? "disabled" : ""}>
+              <option value="normal" ${entry.returnType === "normal" ? "selected" : ""}>通常 16:30</option>
+              <option value="early" ${entry.returnType === "early" ? "selected" : ""}>13:30帰り</option>
+            </select>
+          </label>
+          ${entry.isExtra ? `<button class="remove-button" type="button" data-remove-extra="${escapeHtml(entry.patient.id)}">当日追加を削除</button>` : ""}
+        </div>
+      </article>
+    `).join("")}
+  `;
+}
+
+function getTodayRosterEntries(date = state.serviceDate || getTodayIsoDate()) {
+  const weekday = getWeekdayForDate(date);
+  const plan = getDailyPlan(date);
+  const byId = new Map(state.registeredPatients.map((patient) => [patient.id, patient]));
+  const scheduled = state.registeredPatients
+    .filter((patient) => normalizeWeeklySchedule(patient.weeklySchedule)[weekday.id])
+    .map((patient) => buildRosterEntry(patient, date, false));
+  const scheduledIds = new Set(scheduled.map((entry) => entry.patient.id));
+  const extras = plan.extraCustomerIds
+    .map((id) => byId.get(id))
+    .filter((patient) => patient && !scheduledIds.has(patient.id))
+    .map((patient) => buildRosterEntry(patient, date, true));
+  return [...scheduled, ...extras].sort((a, b) => {
+    if (a.absent !== b.absent) return a.absent ? 1 : -1;
+    return a.patient.name.localeCompare(b.patient.name, "ja");
+  });
+}
+
+function buildRosterEntry(patient, date, isExtra) {
+  const weekday = getWeekdayForDate(date);
+  const plan = getDailyPlan(date);
+  const schedule = normalizeWeeklySchedule(patient.weeklySchedule);
+  const defaultReturnType = schedule[weekday.id] || "normal";
+  const returnType = normalizeReturnType(plan.returnOverrides[patient.id]) || defaultReturnType;
+  return {
+    patient,
+    isExtra,
+    absent: plan.absentCustomerIds.includes(patient.id),
+    returnType,
+  };
+}
+
+function handleTodayRosterChange(event) {
+  const absentInput = event.target.closest("[data-roster-absent]");
+  const returnSelect = event.target.closest("[data-roster-return]");
+  const date = state.serviceDate || getTodayIsoDate();
+  const plan = getDailyPlan(date);
+
+  if (absentInput) {
+    const id = absentInput.dataset.rosterAbsent;
+    const absentSet = new Set(plan.absentCustomerIds);
+    if (absentInput.checked) absentSet.add(id);
+    else absentSet.delete(id);
+    plan.absentCustomerIds = [...absentSet];
+    saveDailyPlan(plan, { status: false });
+    renderTodayRoster();
+    return;
+  }
+
+  if (returnSelect) {
+    const id = returnSelect.dataset.rosterReturn;
+    const returnType = normalizeReturnType(returnSelect.value) || "normal";
+    plan.returnOverrides[id] = returnType;
+    saveDailyPlan(plan, { status: false });
+    renderTodayRoster();
+  }
+}
+
+function handleTodayRosterClick(event) {
+  const removeButton = event.target.closest("[data-remove-extra]");
+  if (!removeButton) return;
+  const date = state.serviceDate || getTodayIsoDate();
+  const plan = getDailyPlan(date);
+  plan.extraCustomerIds = plan.extraCustomerIds.filter((id) => id !== removeButton.dataset.removeExtra);
+  delete plan.returnOverrides[removeButton.dataset.removeExtra];
+  plan.absentCustomerIds = plan.absentCustomerIds.filter((id) => id !== removeButton.dataset.removeExtra);
+  saveDailyPlan(plan);
+  renderTodayRoster();
+}
+
+function addExtraTodayPatient() {
+  const id = els.extraTodayPatientSelect.value;
+  if (!id) {
+    setStatus("当日だけ追加する利用者を選択してください。", true);
+    return;
+  }
+  const patient = state.registeredPatients.find((item) => item.id === id);
+  if (!patient) return;
+
+  const date = state.serviceDate || getTodayIsoDate();
+  const plan = getDailyPlan(date);
+  const extraSet = new Set(plan.extraCustomerIds);
+  extraSet.add(id);
+  plan.extraCustomerIds = [...extraSet];
+  plan.absentCustomerIds = plan.absentCustomerIds.filter((patientId) => patientId !== id);
+  if (!plan.returnOverrides[id]) plan.returnOverrides[id] = getDefaultReturnTypeForPatient(patient, date);
+  saveDailyPlan(plan);
+  els.extraTodayPatientSelect.value = "";
+  renderTodayRoster();
+  setStatus(`${patient.name} を当日だけ追加しました。`);
+}
+
+function applyTodayRosterToRoute() {
+  const date = state.serviceDate || getTodayIsoDate();
+  const entries = getTodayRosterEntries(date).filter((entry) => !entry.absent);
+  if (!entries.length) {
+    setStatus("今日の搭乗者がいません。欠席チェックまたは基本予定を確認してください。", true);
+    return;
+  }
+
+  state.patients = entries.map((entry) => buildRoutePatientFromRoster(entry));
+  const needsWheelchairSwitch = state.patients.some((patient) => ensureVehicleCompatibilityForPatient(patient));
+  persist();
+  renderVehicles();
+  renderPatients();
+  clearRoute();
+  logCareRouteAction("当日搭乗者反映", `${formatDateForRoster(date)}の搭乗者${entries.length}名を今日の送迎へ反映しました。`, "daily-plan", date);
+  setStatus(needsWheelchairSwitch
+    ? `${entries.length}名を今日の送迎へ反映しました。車いす利用者のため1号車または2号車に切り替えました。`
+    : `${entries.length}名を今日の送迎へ反映しました。`);
+}
+
+function buildRoutePatientFromRoster(entry) {
+  const timeWindow = returnTypes[entry.returnType] || returnTypes.normal;
+  return {
+    ...entry.patient,
+    id: makeId(),
+    registryId: entry.patient.id,
+    returnType: entry.returnType,
+    earliest: timeWindow.earliest,
+    latest: timeWindow.latest,
+  };
+}
+
+async function loadDailyPlanForDate(date, options = {}) {
+  const normalizedDate = isIsoDate(date) ? date : getTodayIsoDate();
+  state.serviceDate = normalizedDate;
+  els.serviceDate.value = normalizedDate;
+  if (!backendAvailable || !currentUser) {
+    renderTodayRoster();
+    return;
+  }
+
+  try {
+    const data = await apiFetch(`/api/care-route/daily-plan?date=${encodeURIComponent(normalizedDate)}`);
+    state.dailyPlans[normalizedDate] = normalizeDailyPlan(data.plan, normalizedDate);
+    persist();
+    renderTodayRoster();
+    if (!options.silent) setStatus("当日の搭乗者一覧を更新しました。");
+  } catch (error) {
+    renderTodayRoster();
+    if (!options.silent) setStatus(error.message || "当日の搭乗者一覧を取得できませんでした。", true);
+  }
+}
+
+function saveDailyPlan(plan, options = {}) {
+  const normalized = normalizeDailyPlan(plan, plan.date || state.serviceDate || getTodayIsoDate());
+  state.dailyPlans[normalized.date] = normalized;
+  persist();
+
+  if (backendAvailable && currentUser && canEditCustomers()) {
+    apiFetch("/api/care-route/daily-plan", {
+      method: "POST",
+      body: normalized,
+    }).catch((error) => setStatus(error.message || "当日の変更を保存できませんでした。", true));
+  }
+
+  if (options.status !== false) {
+    setStatus("当日の搭乗者一覧を保存しました。");
+  }
+}
+
+function getDailyPlan(date = state.serviceDate || getTodayIsoDate()) {
+  const normalizedDate = isIsoDate(date) ? date : getTodayIsoDate();
+  if (!state.dailyPlans[normalizedDate]) {
+    state.dailyPlans[normalizedDate] = createEmptyDailyPlan(normalizedDate);
+  }
+  return state.dailyPlans[normalizedDate];
+}
+
+function normalizeDailyPlans(value) {
+  const result = {};
+  if (!value || typeof value !== "object") return result;
+  Object.entries(value).forEach(([date, plan]) => {
+    if (isIsoDate(date)) result[date] = normalizeDailyPlan(plan, date);
+  });
+  return result;
+}
+
+function normalizeDailyPlan(plan, fallbackDate = getTodayIsoDate()) {
+  const date = isIsoDate(plan?.date) ? plan.date : fallbackDate;
+  const returnOverrides = {};
+  Object.entries(plan?.returnOverrides || {}).forEach(([id, value]) => {
+    const returnType = normalizeReturnType(value);
+    if (id && returnType) returnOverrides[id] = returnType;
+  });
+  return {
+    date,
+    absentCustomerIds: uniqueStringArray(plan?.absentCustomerIds),
+    returnOverrides,
+    extraCustomerIds: uniqueStringArray(plan?.extraCustomerIds),
+  };
+}
+
+function createEmptyDailyPlan(date) {
+  return {
+    date,
+    absentCustomerIds: [],
+    returnOverrides: {},
+    extraCustomerIds: [],
+  };
+}
+
+function uniqueStringArray(value) {
+  return [...new Set(Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [])];
 }
 
 function applyRegisteredPatientToForm(patientId, options = {}) {
@@ -848,6 +1181,7 @@ function readRegistryForm() {
     wheelchair: els.registryWheelchair.checked,
     earliest: els.registryEarliest.value || "",
     latest: els.registryLatest.value || "",
+    weeklySchedule: readWeeklyScheduleForm(),
   };
 }
 
@@ -901,6 +1235,7 @@ function startEditingRegisteredPatient(id) {
   els.registryEarliest.value = registeredPatient.earliest || "";
   els.registryLatest.value = registeredPatient.latest || "";
   els.registryWheelchair.checked = Boolean(registeredPatient.wheelchair);
+  fillWeeklyScheduleForm(registeredPatient.weeklySchedule);
   els.registrySubmitButton.textContent = "登録内容を更新";
   els.registryCancelEditButton.hidden = false;
   setStatus(`${registeredPatient.name} の登録内容を編集中です。`);
@@ -950,6 +1285,7 @@ async function registerCurrentPatients() {
             wheelchair: Boolean(patient.wheelchair),
             earliest: patient.earliest || "",
             latest: patient.latest || "",
+            weeklySchedule: patient.weeklySchedule || {},
           },
         });
         savedCount += 1;
@@ -973,6 +1309,7 @@ async function registerCurrentPatients() {
       wheelchair: Boolean(patient.wheelchair),
       earliest: patient.earliest || "",
       latest: patient.latest || "",
+      weeklySchedule: patient.weeklySchedule || {},
     });
     addedCount += 1;
   });
@@ -997,9 +1334,9 @@ async function loadBulkImportFile() {
 
 async function copyBulkTemplate() {
   const template = [
-    ["利用者名", "住所", "人数", "車いす", "何時以降", "何時まで"].join("\t"),
-    ["田中様", "川崎市川崎区大師町10-6", "1", "なし", "09:00", "10:00"].join("\t"),
-    ["佐藤様", "川崎大師駅", "1", "あり", "09:30", ""].join("\t"),
+    ["利用者名", "住所", "人数", "車いす", "何時以降", "何時まで", "利用曜日", "帰り区分"].join("\t"),
+    ["田中様", "川崎市川崎区大師町10-6", "1", "なし", "", "", "月,水,金", "通常"].join("\t"),
+    ["佐藤様", "川崎大師駅", "1", "あり", "", "", "火:13:30,木:通常", ""].join("\t"),
   ].join("\n");
   try {
     await navigator.clipboard.writeText(template);
@@ -1048,6 +1385,7 @@ async function commitBulkImport() {
             wheelchair: patient.wheelchair,
             earliest: patient.earliest,
             latest: patient.latest,
+            weeklySchedule: patient.weeklySchedule || {},
           },
         });
         savedCount += 1;
@@ -1160,6 +1498,8 @@ function createBulkHeaderMap(columns) {
     if (/車いす|車イス|車椅子/.test(value)) map.wheelchair = index;
     if (/何時以降|開始|以降|希望開始/.test(value)) map.earliest = index;
     if (/何時まで|終了|まで|希望終了/.test(value)) map.latest = index;
+    if (/利用曜日|来所曜日|予定曜日|曜日/.test(value)) map.weekdays = index;
+    if (/帰り区分|帰宅区分|帰り|帰宅|送迎区分/.test(value)) map.returnType = index;
   });
   return map;
 }
@@ -1174,6 +1514,7 @@ function normalizeBulkPatientRow(columns, headerMap) {
     wheelchair: normalizeWheelchairValue(pick("wheelchair", 3)),
     earliest: normalizeTimeValue(pick("earliest", 4)),
     latest: normalizeTimeValue(pick("latest", 5)),
+    weeklySchedule: parseWeeklyScheduleText(pick("weekdays", 6), pick("returnType", 7)),
   };
 }
 
@@ -1199,6 +1540,118 @@ function normalizeTimeValue(value) {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
+function readWeeklyScheduleForm() {
+  const schedule = {};
+  weekdays.forEach((weekday) => {
+    const enabled = document.querySelector(`[data-weekday-enabled="${weekday.id}"]`);
+    const returnSelect = document.querySelector(`[data-weekday-return="${weekday.id}"]`);
+    if (enabled?.checked) {
+      schedule[weekday.id] = normalizeReturnType(returnSelect?.value) || "normal";
+    }
+  });
+  return schedule;
+}
+
+function fillWeeklyScheduleForm(schedule) {
+  const normalized = normalizeWeeklySchedule(schedule);
+  weekdays.forEach((weekday) => {
+    const enabled = document.querySelector(`[data-weekday-enabled="${weekday.id}"]`);
+    const returnSelect = document.querySelector(`[data-weekday-return="${weekday.id}"]`);
+    if (!enabled || !returnSelect) return;
+    enabled.checked = Boolean(normalized[weekday.id]);
+    returnSelect.value = normalized[weekday.id] || "normal";
+  });
+  syncWeeklyScheduleSelects();
+}
+
+function syncWeeklyScheduleSelects() {
+  weekdays.forEach((weekday) => {
+    const enabled = document.querySelector(`[data-weekday-enabled="${weekday.id}"]`);
+    const returnSelect = document.querySelector(`[data-weekday-return="${weekday.id}"]`);
+    if (!enabled || !returnSelect) return;
+    returnSelect.disabled = !enabled.checked;
+  });
+}
+
+function normalizeWeeklySchedule(value) {
+  const schedule = {};
+  if (!value || typeof value !== "object") return schedule;
+  weekdays.forEach((weekday) => {
+    const returnType = normalizeReturnType(value[weekday.id]);
+    if (returnType) schedule[weekday.id] = returnType;
+  });
+  return schedule;
+}
+
+function parseWeeklyScheduleText(weekdaysText, returnTypeText) {
+  const schedule = {};
+  const defaultReturnType = normalizeReturnType(returnTypeText) || "normal";
+  const source = String(weekdaysText || "").trim();
+  if (!source) return schedule;
+
+  source
+    .split(/[、,，\s]+/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .forEach((token) => {
+      const [dayText, typeText] = token.split(/[:：=＝]/).map((part) => part.trim());
+      const weekdayId = getWeekdayIdFromText(dayText);
+      if (!weekdayId) return;
+      schedule[weekdayId] = normalizeReturnType(typeText) || defaultReturnType;
+    });
+  return schedule;
+}
+
+function normalizeReturnType(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return "";
+  if (text === "early" || text === "2" || /13|早|短|午後/.test(text)) return "early";
+  if (text === "normal" || text === "1" || /16|通常|普通|標準/.test(text)) return "normal";
+  return returnTypes[text] ? text : "";
+}
+
+function getDefaultReturnTypeForPatient(patient, date) {
+  const weekday = getWeekdayForDate(date);
+  return normalizeWeeklySchedule(patient.weeklySchedule)[weekday.id] || "normal";
+}
+
+function getWeekdayIdFromText(value) {
+  const text = String(value || "").trim().toLowerCase();
+  const normalized = text.replace(/曜(?:日)?/g, "");
+  const map = {
+    月: "mon",
+    mon: "mon",
+    monday: "mon",
+    火: "tue",
+    tue: "tue",
+    tuesday: "tue",
+    水: "wed",
+    wed: "wed",
+    wednesday: "wed",
+    木: "thu",
+    thu: "thu",
+    thursday: "thu",
+    金: "fri",
+    fri: "fri",
+    friday: "fri",
+    土: "sat",
+    sat: "sat",
+    saturday: "sat",
+    日: "sun",
+    sun: "sun",
+    sunday: "sun",
+  };
+  return map[normalized] || "";
+}
+
+function formatWeeklyScheduleSummary(schedule) {
+  const normalized = normalizeWeeklySchedule(schedule);
+  const parts = weekdays
+    .filter((weekday) => normalized[weekday.id])
+    .map((weekday) => `${weekday.label}:${returnTypes[normalized[weekday.id]]?.time || returnTypes.normal.time}`);
+  return parts.length ? `基本曜日 ${parts.join(" / ")}` : "基本曜日 未設定";
+}
+
 function renderBulkPreview(rows) {
   if (!rows.valid.length && !rows.errors.length) {
     els.bulkImportPreview.textContent = "貼り付け内容が空です。";
@@ -1211,6 +1664,7 @@ function renderBulkPreview(rows) {
       <td>${patient.passengers}</td>
       <td>${patient.wheelchair ? "あり" : "なし"}</td>
       <td>${escapeHtml(formatWindow(patient))}</td>
+      <td>${escapeHtml(formatWeeklyScheduleSummary(patient.weeklySchedule))}</td>
     </tr>
   `).join("");
   const errorHtml = rows.errors.length ? `<p>${escapeHtml(rows.errors.slice(0, 5).join(" / "))}</p>` : "";
@@ -1218,7 +1672,7 @@ function renderBulkPreview(rows) {
     <strong>${rows.valid.length}名を取り込み候補にしました。</strong>
     ${errorHtml}
     <table>
-      <thead><tr><th>利用者名</th><th>住所</th><th>人数</th><th>車いす</th><th>時間</th></tr></thead>
+      <thead><tr><th>利用者名</th><th>住所</th><th>人数</th><th>車いす</th><th>時間</th><th>基本曜日</th></tr></thead>
       <tbody>${previewRows}</tbody>
     </table>
   `;
@@ -1228,6 +1682,7 @@ function resetRegistryForm() {
   editingRegistryId = null;
   els.registryForm.reset();
   els.registryPassengers.value = "1";
+  fillWeeklyScheduleForm({});
   els.registrySubmitButton.textContent = "顧客を登録";
   els.registryCancelEditButton.hidden = true;
 }
@@ -1650,6 +2105,27 @@ function getCurrentTimeValue() {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
+function getTodayIsoDate() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function isIsoDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+}
+
+function getWeekdayForDate(dateValue) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  const day = Number.isFinite(date.getTime()) ? date.getDay() : new Date().getDay();
+  return weekdays.find((weekday) => weekday.day === day) || weekdays[0];
+}
+
+function formatDateForRoster(dateValue) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (!Number.isFinite(date.getTime())) return dateValue;
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
 function formatClock(date) {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
@@ -1859,6 +2335,8 @@ function loadState() {
         vehicleId: saved.vehicleId || "car1",
         patients: Array.isArray(saved.patients) ? saved.patients : [],
         registeredPatients: Array.isArray(saved.registeredPatients) ? saved.registeredPatients : [],
+        serviceDate: isIsoDate(saved.serviceDate) ? saved.serviceDate : getTodayIsoDate(),
+        dailyPlans: normalizeDailyPlans(saved.dailyPlans),
         activeAppTab: ["plan", "map", "customers"].includes(saved.activeAppTab) ? saved.activeAppTab : "plan",
       };
     }
@@ -1874,6 +2352,8 @@ function loadState() {
     vehicleId: "car1",
     patients: [],
     registeredPatients: [],
+    serviceDate: getTodayIsoDate(),
+    dailyPlans: {},
     activeAppTab: "plan",
   };
 }
@@ -1887,6 +2367,8 @@ function persist() {
       useNowTime: state.useNowTime,
       autoRefresh: state.autoRefresh,
       vehicleId: state.vehicleId,
+      serviceDate: state.serviceDate,
+      dailyPlans: state.dailyPlans,
       activeAppTab: state.activeAppTab,
       patients: [],
       registeredPatients: [],
