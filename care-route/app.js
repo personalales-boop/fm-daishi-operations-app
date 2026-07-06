@@ -34,6 +34,11 @@ const returnTypes = {
   early: { label: "13:30帰り", time: "13:30", earliest: "13:30", latest: "14:00" },
 };
 
+const serviceTypes = {
+  morning: { label: "朝の送迎", shortLabel: "朝迎え", actionLabel: "迎え", defaultStartTime: "08:30" },
+  evening: { label: "夕方の送迎", shortLabel: "夕方送り", actionLabel: "送り", defaultStartTime: "16:30" },
+};
+
 const finalReviewLoginUsers = [
   { id: "review_admin", name: "管理者", permission: "admin", pin: "0000", color: "#0b72d9" },
   { id: "review_dispatcher", name: "配車担当", permission: "staff", pin: "1111", color: "#098a65" },
@@ -91,6 +96,7 @@ const els = {
   startAddress: document.getElementById("startAddress"),
   endAddress: document.getElementById("endAddress"),
   startTime: document.getElementById("startTime"),
+  serviceType: document.getElementById("serviceType"),
   useLocationButton: document.getElementById("useLocationButton"),
   useNowTime: document.getElementById("useNowTime"),
   vehicleGrid: document.getElementById("vehicleGrid"),
@@ -109,6 +115,8 @@ const els = {
   patientEarliest: document.getElementById("patientEarliest"),
   patientLatest: document.getElementById("patientLatest"),
   patientWheelchair: document.getElementById("patientWheelchair"),
+  patientNote: document.getElementById("patientNote"),
+  autoAssignVehiclesButton: document.getElementById("autoAssignVehiclesButton"),
   clearPatientsButton: document.getElementById("clearPatientsButton"),
   patientList: document.getElementById("patientList"),
   registryForm: document.getElementById("registryForm"),
@@ -118,6 +126,7 @@ const els = {
   registryEarliest: document.getElementById("registryEarliest"),
   registryLatest: document.getElementById("registryLatest"),
   registryWheelchair: document.getElementById("registryWheelchair"),
+  registryNote: document.getElementById("registryNote"),
   registrySubmitButton: document.getElementById("registrySubmitButton"),
   registryCancelEditButton: document.getElementById("registryCancelEditButton"),
   weekdayEnabledInputs: document.querySelectorAll("[data-weekday-enabled]"),
@@ -135,6 +144,11 @@ const els = {
   optimizeButton: document.getElementById("optimizeButton"),
   autoRefreshButton: document.getElementById("autoRefreshButton"),
   googleMapsButton: document.getElementById("googleMapsButton"),
+  dispatchSheetPanel: document.getElementById("dispatchSheetPanel"),
+  dispatchSheetBody: document.getElementById("dispatchSheetBody"),
+  copyDispatchSheetButton: document.getElementById("copyDispatchSheetButton"),
+  downloadDispatchCsvButton: document.getElementById("downloadDispatchCsvButton"),
+  printDispatchSheetButton: document.getElementById("printDispatchSheetButton"),
   statusText: document.getElementById("statusText"),
   fitMapButton: document.getElementById("fitMapButton"),
   resultPanel: document.getElementById("resultPanel"),
@@ -146,6 +160,7 @@ let markerLayer;
 let routeLayer;
 let lastRouteBounds = null;
 let lastRouteSnapshot = null;
+let lastRouteOrderedPatients = [];
 let lastGoogleMapsUrl = "";
 let autoRefreshTimer = null;
 let editingRegistryId = null;
@@ -168,6 +183,7 @@ async function boot() {
   renderPatients();
   renderRegisteredPatients();
   renderTodayRoster();
+  renderDispatchSheet();
   syncAutoRefresh();
   await initSecureBackend();
 }
@@ -184,6 +200,7 @@ function bindEvents() {
     persist();
     renderVehicles();
     renderPatients();
+    renderDispatchSheet();
   });
 
   [els.startAddress, els.endAddress, els.startTime].forEach((input) => {
@@ -192,10 +209,21 @@ function bindEvents() {
       state.endAddress = els.endAddress.value.trim();
       state.startTime = els.startTime.value || "08:30";
       persist();
+      renderDispatchSheet();
       if (!lastRouteBounds && state.activeAppTab === "map") {
         focusStartAddressOnMap();
       }
     });
+  });
+  els.serviceType.addEventListener("change", () => {
+    const previousDefault = getServiceTypeConfig(state.serviceType).defaultStartTime;
+    state.serviceType = normalizeServiceType(els.serviceType.value);
+    if (!els.startTime.value || els.startTime.value === previousDefault) {
+      state.startTime = getServiceTypeConfig(state.serviceType).defaultStartTime;
+      els.startTime.value = state.startTime;
+    }
+    persist();
+    renderDispatchSheet();
   });
   els.useNowTime.addEventListener("change", () => {
     state.useNowTime = els.useNowTime.checked;
@@ -210,6 +238,7 @@ function bindEvents() {
     void loadDailyPlanForDate(state.serviceDate || getTodayIsoDate());
   });
   els.todayRosterList.addEventListener("change", handleTodayRosterChange);
+  els.todayRosterList.addEventListener("input", handleTodayRosterInput);
   els.todayRosterList.addEventListener("click", handleTodayRosterClick);
   els.addExtraTodayPatientButton.addEventListener("click", addExtraTodayPatient);
   els.applyTodayRosterButton.addEventListener("click", applyTodayRosterToRoute);
@@ -229,6 +258,7 @@ function bindEvents() {
   els.clearRegistryFormButton.addEventListener("click", resetRegistryForm);
   els.registryCancelEditButton.addEventListener("click", resetRegistryForm);
   els.weekdayEnabledInputs.forEach((input) => input.addEventListener("change", syncWeeklyScheduleSelects));
+  els.autoAssignVehiclesButton.addEventListener("click", autoAssignVehicles);
   els.bulkTemplateButton.addEventListener("click", copyBulkTemplate);
   els.bulkPreviewButton.addEventListener("click", previewBulkImport);
   els.bulkCommitButton.addEventListener("click", commitBulkImport);
@@ -248,10 +278,15 @@ function bindEvents() {
   });
   els.clearPatientsButton.addEventListener("click", clearPatients);
   els.patientList.addEventListener("click", removePatient);
+  els.patientList.addEventListener("change", handlePatientListChange);
+  els.patientList.addEventListener("input", handlePatientListInput);
   els.useLocationButton.addEventListener("click", useCurrentLocationAsStart);
   els.optimizeButton.addEventListener("click", optimizeRoute);
   els.autoRefreshButton.addEventListener("click", toggleAutoRefresh);
   els.googleMapsButton.addEventListener("click", openGoogleMapsRoute);
+  els.copyDispatchSheetButton.addEventListener("click", copyDispatchSheet);
+  els.downloadDispatchCsvButton.addEventListener("click", downloadDispatchCsv);
+  els.printDispatchSheetButton.addEventListener("click", printDispatchSheet);
   els.fitMapButton.addEventListener("click", fitRouteBounds);
   window.addEventListener("beforeunload", () => window.clearInterval(autoRefreshTimer));
 }
@@ -288,6 +323,7 @@ function syncInputsFromState() {
   els.startAddress.value = state.startAddress;
   els.endAddress.value = state.endAddress;
   els.startTime.value = state.startTime;
+  els.serviceType.value = normalizeServiceType(state.serviceType);
   els.useNowTime.checked = state.useNowTime !== false;
   els.serviceDate.value = state.serviceDate || getTodayIsoDate();
 }
@@ -433,6 +469,7 @@ function lockAppForLogin(message = "ログインしてください。") {
     renderPatients();
     renderRegisteredPatients();
     renderTodayRoster();
+    renderDispatchSheet();
     persist();
   }
   setAppInteractive(false);
@@ -453,6 +490,7 @@ function setAppInteractive(enabled) {
     els.refreshTodayRosterButton,
     els.addExtraTodayPatientButton,
     els.applyTodayRosterButton,
+    els.autoAssignVehiclesButton,
     els.clearPatientsButton,
     els.optimizeButton,
     els.autoRefreshButton,
@@ -461,10 +499,13 @@ function setAppInteractive(enabled) {
     els.bulkTemplateButton,
     els.bulkPreviewButton,
     els.bulkCommitButton,
+    els.copyDispatchSheetButton,
+    els.downloadDispatchCsvButton,
+    els.printDispatchSheetButton,
   ].forEach((button) => {
     if (button) button.disabled = !enabled;
   });
-  [els.serviceDate, els.extraTodayPatientSelect, els.bulkImportText, els.bulkImportFile, els.bulkAddToRoute].forEach((element) => {
+  [els.serviceType, els.serviceDate, els.extraTodayPatientSelect, els.bulkImportText, els.bulkImportFile, els.bulkAddToRoute].forEach((element) => {
     if (element) element.disabled = !enabled;
   });
   if (!enabled) els.googleMapsButton.disabled = true;
@@ -590,6 +631,8 @@ function addPatient(event) {
     wheelchair: els.patientWheelchair.checked,
     earliest: els.patientEarliest.value || "",
     latest: els.patientLatest.value || "",
+    note: els.patientNote.value.trim(),
+    assignedVehicleId: getCompatibleVehicleId(els.patientWheelchair.checked ? "car1" : state.vehicleId, els.patientWheelchair.checked),
   };
 
   if (!patient.name || !patient.address) {
@@ -606,6 +649,7 @@ function addPatient(event) {
   lastAutofilledPatientId = "";
   renderVehicles();
   renderPatients();
+  renderDispatchSheet();
   setStatus(changedVehicle ? "車いす利用者のため、1号車または2号車に切り替えて追加しました。" : "患者様を追加しました。");
 }
 
@@ -616,6 +660,7 @@ function removePatient(event) {
   persist();
   renderVehicles();
   renderPatients();
+  renderDispatchSheet();
   setStatus("患者様を削除しました。");
 }
 
@@ -625,6 +670,7 @@ function clearPatients() {
   renderVehicles();
   renderPatients();
   clearRoute();
+  renderDispatchSheet();
   setStatus("患者様リストを空にしました。");
 }
 
@@ -692,9 +738,11 @@ function renderPatients() {
   const totalPassengers = getTotalPassengers();
   const wheelchairCount = getWheelchairCount();
   const seatedPassengers = getSeatedPassengers();
+  normalizePatientVehicleAssignments();
 
   if (!state.patients.length) {
     els.patientList.innerHTML = `<div class="patient-card"><div><strong>今日の送迎対象は未登録です</strong><span>住所と時間制約を入力するか、患者さま登録から呼び出してください。</span></div></div>`;
+    renderDispatchSheet();
     return;
   }
 
@@ -703,6 +751,7 @@ function renderPatients() {
       <div>
         <strong>合計 ${totalPassengers}名 / ${vehicle.name}</strong>
         <span>座席 ${seatedPassengers}/${vehicle.capacity}名・車いす ${wheelchairCount}/${vehicle.wheelchairCapacity || 0}台 / ${getCapacityMessage(vehicle)}</span>
+        <span>${escapeHtml(formatVehicleAssignmentSummary())}</span>
       </div>
     </div>
     ${state.patients.map((patient) => `
@@ -711,11 +760,26 @@ function renderPatients() {
           <strong>${escapeHtml(patient.name)} ${patient.wheelchair ? "・車いす" : ""}</strong>
           <span>${escapeHtml(patient.address)}</span>
           <span>${escapeHtml(formatWindow(patient))} / ${patient.passengers}名</span>
+          <div class="patient-card-controls">
+            <label>
+              <span>配車車両</span>
+              <select data-patient-vehicle="${escapeHtml(patient.id)}">
+                ${vehicles.map((vehicleItem) => `
+                  <option value="${escapeHtml(vehicleItem.id)}" ${getAssignedVehicle(patient).id === vehicleItem.id ? "selected" : ""} ${patient.wheelchair && !vehicleItem.wheelchair ? "disabled" : ""}>${escapeHtml(vehicleItem.name)}</option>
+                `).join("")}
+              </select>
+            </label>
+            <label>
+              <span>配車表の備考</span>
+              <textarea rows="2" data-patient-note="${escapeHtml(patient.id)}" placeholder="ドライバーへ伝える内容">${escapeHtml(patient.note || "")}</textarea>
+            </label>
+          </div>
         </div>
         <button class="remove-button" type="button" data-remove="${escapeHtml(patient.id)}">削除</button>
       </article>
     `).join("")}
   `;
+  renderDispatchSheet();
 }
 
 function renderRegisteredPatients() {
@@ -754,6 +818,7 @@ function renderRegisteredPatients() {
           <span>${escapeHtml(patient.address)}</span>
           <span>${escapeHtml(formatWindow(patient))} / ${patient.passengers}名</span>
           <span>${escapeHtml(formatWeeklyScheduleSummary(patient.weeklySchedule))}</span>
+          ${patient.note ? `<span>備考: ${escapeHtml(patient.note)}</span>` : ""}
         </div>
         <div class="card-actions">
           <button class="call-button" type="button" data-call-registry="${escapeHtml(patient.id)}">呼び出す</button>
@@ -789,6 +854,275 @@ function syncRegisteredPatientInputs(list = null) {
 
 function buildRegisteredPatientOptionLabel(patient) {
   return `${patient.name}${patient.wheelchair ? " / 車いす" : ""} / ${patient.address}`;
+}
+
+function handlePatientListChange(event) {
+  const vehicleSelect = event.target.closest("[data-patient-vehicle]");
+  if (!vehicleSelect) return;
+  const patient = state.patients.find((item) => item.id === vehicleSelect.dataset.patientVehicle);
+  if (!patient) return;
+  const nextVehicleId = getCompatibleVehicleId(vehicleSelect.value, Boolean(patient.wheelchair));
+  patient.assignedVehicleId = nextVehicleId;
+  vehicleSelect.value = nextVehicleId;
+  persist();
+  renderPatients();
+  renderDispatchSheet();
+}
+
+function handlePatientListInput(event) {
+  const noteInput = event.target.closest("[data-patient-note]");
+  if (!noteInput) return;
+  const patient = state.patients.find((item) => item.id === noteInput.dataset.patientNote);
+  if (!patient) return;
+  patient.note = noteInput.value.trim();
+  persist();
+  renderDispatchSheet();
+}
+
+function autoAssignVehicles() {
+  if (!state.patients.length) {
+    setStatus("送迎対象がいないため、車両割当はできません。", true);
+    return;
+  }
+
+  const usage = new Map(vehicles.map((vehicle) => [vehicle.id, { seated: 0, wheelchair: 0 }]));
+  const sortedPatients = [...state.patients].sort((a, b) => Number(Boolean(b.wheelchair)) - Number(Boolean(a.wheelchair)));
+
+  sortedPatients.forEach((patient) => {
+    const targetVehicle = vehicles.find((vehicle) => {
+      if (patient.wheelchair && !vehicle.wheelchair) return false;
+      const current = usage.get(vehicle.id);
+      const nextWheelchair = current.wheelchair + (patient.wheelchair ? 1 : 0);
+      const nextSeated = current.seated + (patient.wheelchair ? 0 : Number(patient.passengers || 1));
+      return nextWheelchair <= (vehicle.wheelchairCapacity || 0) && nextSeated <= vehicle.capacity;
+    }) || vehicles.find((vehicle) => patient.wheelchair ? vehicle.wheelchair : true) || vehicles[0];
+
+    patient.assignedVehicleId = targetVehicle.id;
+    const current = usage.get(targetVehicle.id);
+    current.wheelchair += patient.wheelchair ? 1 : 0;
+    current.seated += patient.wheelchair ? 0 : Number(patient.passengers || 1);
+  });
+
+  persist();
+  renderPatients();
+  renderDispatchSheet();
+  setStatus("定員と車いす条件を見ながら、車両を自動割当しました。");
+}
+
+function normalizePatientVehicleAssignments() {
+  state.patients.forEach((patient) => {
+    patient.assignedVehicleId = getCompatibleVehicleId(patient.assignedVehicleId || state.vehicleId, Boolean(patient.wheelchair));
+  });
+}
+
+function getCompatibleVehicleId(vehicleId, wheelchairRequired = false) {
+  const fallback = wheelchairRequired ? vehicles.find((vehicle) => vehicle.wheelchair) : getVehicle();
+  const requested = vehicles.find((vehicle) => vehicle.id === vehicleId);
+  if (!requested) return fallback?.id || vehicles[0].id;
+  if (wheelchairRequired && !requested.wheelchair) return fallback?.id || vehicles[0].id;
+  return requested.id;
+}
+
+function getAssignedVehicle(patient) {
+  return vehicles.find((vehicle) => vehicle.id === getCompatibleVehicleId(patient.assignedVehicleId, Boolean(patient.wheelchair))) || vehicles[0];
+}
+
+function formatVehicleAssignmentSummary() {
+  const groups = groupPatientsByVehicle();
+  const parts = vehicles
+    .map((vehicle) => {
+      const patients = groups.get(vehicle.id) || [];
+      if (!patients.length) return "";
+      const seated = patients.reduce((sum, patient) => sum + (patient.wheelchair ? 0 : Number(patient.passengers || 1)), 0);
+      const wheelchair = patients.filter((patient) => patient.wheelchair).length;
+      return `${vehicle.name}: 座席${seated}/${vehicle.capacity}・車いす${wheelchair}/${vehicle.wheelchairCapacity || 0}`;
+    })
+    .filter(Boolean);
+  return parts.length ? `配車割当 ${parts.join(" / ")}` : "配車割当 未設定";
+}
+
+function groupPatientsByVehicle() {
+  normalizePatientVehicleAssignments();
+  const groups = new Map(vehicles.map((vehicle) => [vehicle.id, []]));
+  state.patients.forEach((patient) => {
+    const vehicleId = getAssignedVehicle(patient).id;
+    groups.get(vehicleId).push(patient);
+  });
+  return groups;
+}
+
+function renderDispatchSheet() {
+  if (!els.dispatchSheetBody) return;
+  const rows = buildDispatchRows();
+  const hasRows = rows.length > 0;
+  [els.copyDispatchSheetButton, els.downloadDispatchCsvButton, els.printDispatchSheetButton].forEach((button) => {
+    if (button) button.disabled = !hasRows;
+  });
+
+  if (!hasRows) {
+    els.dispatchSheetBody.innerHTML = `
+      <div class="empty-result">
+        <strong>配車表はまだ作成されていません</strong>
+        <span>送迎対象を追加し、必要に応じて車両と備考を整えると、各車別の配車表を出力できます。</span>
+      </div>
+    `;
+    return;
+  }
+
+  const service = getServiceTypeConfig(state.serviceType);
+  const rowsByVehicle = groupDispatchRowsByVehicle(rows);
+  els.dispatchSheetBody.innerHTML = vehicles.map((vehicle) => {
+    const vehicleRows = rowsByVehicle.get(vehicle.id) || [];
+    if (!vehicleRows.length) return "";
+    return `
+      <section class="dispatch-vehicle-sheet">
+        <div class="dispatch-sheet-head">
+          <div>
+            <strong>${escapeHtml(vehicle.name)} / ${escapeHtml(service.shortLabel)}</strong>
+            <span>${escapeHtml(state.serviceDate || getTodayIsoDate())} ${escapeHtml(state.startTime || service.defaultStartTime)} 出発 / ${vehicle.wheelchair ? `車いす${vehicle.wheelchairCapacity}台対応` : "座席車"}</span>
+          </div>
+          <span>${vehicleRows.length}件</span>
+        </div>
+        <div class="dispatch-table-wrap">
+          <table class="dispatch-table">
+            <thead>
+              <tr><th>順番</th><th>目安</th><th>利用者</th><th>住所</th><th>人数</th><th>区分</th><th>備考</th></tr>
+            </thead>
+            <tbody>
+              ${vehicleRows.map((row) => `
+                <tr>
+                  <td>${row.order}</td>
+                  <td>${escapeHtml(row.eta || "")}</td>
+                  <td>${escapeHtml(row.name)}</td>
+                  <td>${escapeHtml(row.address)}</td>
+                  <td>${escapeHtml(row.passengers)}</td>
+                  <td>${escapeHtml(row.wheelchair ? "車いす" : service.actionLabel)}</td>
+                  <td>${escapeHtml(row.note || "")}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  }).join("");
+}
+
+function buildDispatchRows() {
+  if (!state.patients.length) return [];
+  normalizePatientVehicleAssignments();
+  const service = getServiceTypeConfig(state.serviceType);
+  const orderMap = new Map(lastRouteOrderedPatients.map((patient, index) => [patient.id, { order: index + 1, eta: patient.eta ? formatMinutes(patient.eta) : "" }]));
+  const latestById = new Map(state.patients.map((patient) => [patient.id, patient]));
+  const source = lastRouteOrderedPatients.length
+    ? lastRouteOrderedPatients.map((patient) => ({ ...(latestById.get(patient.id) || patient), eta: patient.eta }))
+    : [...state.patients];
+  const sourceIds = new Set(source.map((patient) => patient.id));
+  state.patients.forEach((patient) => {
+    if (!sourceIds.has(patient.id)) source.push(patient);
+  });
+
+  return source.map((patient, index) => {
+    const routeOrder = orderMap.get(patient.id);
+    const assignedVehicle = getAssignedVehicle(patient);
+    return {
+      vehicleId: assignedVehicle.id,
+      vehicleName: assignedVehicle.name,
+      serviceType: state.serviceType,
+      serviceLabel: service.label,
+      order: routeOrder?.order || index + 1,
+      eta: routeOrder?.eta || "",
+      name: patient.name,
+      address: patient.address,
+      passengers: `${patient.passengers || 1}名`,
+      wheelchair: Boolean(patient.wheelchair),
+      note: patient.note || "",
+      window: formatWindow(patient),
+    };
+  }).sort((a, b) => {
+    const vehicleIndex = vehicles.findIndex((vehicle) => vehicle.id === a.vehicleId) - vehicles.findIndex((vehicle) => vehicle.id === b.vehicleId);
+    return vehicleIndex || a.order - b.order;
+  });
+}
+
+function groupDispatchRowsByVehicle(rows) {
+  const groups = new Map(vehicles.map((vehicle) => [vehicle.id, []]));
+  rows.forEach((row) => {
+    if (!groups.has(row.vehicleId)) groups.set(row.vehicleId, []);
+    groups.get(row.vehicleId).push(row);
+  });
+  return groups;
+}
+
+async function copyDispatchSheet() {
+  const text = buildDispatchSheetText("\t");
+  if (!text) {
+    setStatus("コピーできる配車表がありません。", true);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus("各車別の配車表をコピーしました。Excelやスプレッドシートへ貼り付けできます。");
+  } catch {
+    setStatus("クリップボードへコピーできませんでした。CSV出力を使用してください。", true);
+  }
+}
+
+function downloadDispatchCsv() {
+  const csv = buildDispatchCsv();
+  if (!csv) {
+    setStatus("出力できる配車表がありません。", true);
+    return;
+  }
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `配車表_${state.serviceDate || getTodayIsoDate()}_${getServiceTypeConfig(state.serviceType).shortLabel}.csv`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  setStatus("各車別の配車表CSVを出力しました。");
+}
+
+function printDispatchSheet() {
+  window.print();
+}
+
+function buildDispatchCsv() {
+  return buildDispatchSheetText(",", { csv: true });
+}
+
+function buildDispatchSheetText(delimiter, options = {}) {
+  const rows = buildDispatchRows();
+  if (!rows.length) return "";
+  const service = getServiceTypeConfig(state.serviceType);
+  const header = ["日付", "便区分", "出発予定", "車両", "順番", "到着目安", "利用者", "住所", "人数", "車いす", "時間指定", "備考"];
+  const lines = [header];
+  rows.forEach((row) => {
+    lines.push([
+      state.serviceDate || getTodayIsoDate(),
+      service.label,
+      state.startTime || service.defaultStartTime,
+      row.vehicleName,
+      row.order,
+      row.eta,
+      row.name,
+      row.address,
+      row.passengers,
+      row.wheelchair ? "あり" : "なし",
+      row.window,
+      row.note || "",
+    ]);
+  });
+  return lines.map((line) => line.map((cell) => options.csv ? escapeCsvCell(cell) : String(cell ?? "")).join(delimiter)).join("\n");
+}
+
+function escapeCsvCell(value) {
+  const text = String(value ?? "");
+  if (/[",\n\r]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
+  return text;
 }
 
 function syncExtraTodayPatientSelect(list = null) {
@@ -862,6 +1196,10 @@ function renderTodayRoster() {
               <option value="early" ${entry.returnType === "early" ? "selected" : ""}>13:30帰り</option>
             </select>
           </label>
+          <label>
+            <span>配車表の備考</span>
+            <textarea rows="2" data-roster-note="${escapeHtml(entry.patient.id)}" ${entry.absent ? "disabled" : ""} placeholder="ドライバーへ伝える内容">${escapeHtml(entry.note || "")}</textarea>
+          </label>
           ${entry.isExtra ? `<button class="remove-button" type="button" data-remove-extra="${escapeHtml(entry.patient.id)}">当日追加を削除</button>` : ""}
         </div>
       </article>
@@ -898,12 +1236,14 @@ function buildRosterEntry(patient, date, isExtra) {
     isExtra,
     absent: plan.absentCustomerIds.includes(patient.id),
     returnType,
+    note: plan.notes[patient.id] ?? patient.note ?? "",
   };
 }
 
 function handleTodayRosterChange(event) {
   const absentInput = event.target.closest("[data-roster-absent]");
   const returnSelect = event.target.closest("[data-roster-return]");
+  const noteInput = event.target.closest("[data-roster-note]");
   const date = state.serviceDate || getTodayIsoDate();
   const plan = getDailyPlan(date);
 
@@ -915,6 +1255,7 @@ function handleTodayRosterChange(event) {
     plan.absentCustomerIds = [...absentSet];
     saveDailyPlan(plan, { status: false });
     renderTodayRoster();
+    renderDispatchSheet();
     return;
   }
 
@@ -924,7 +1265,24 @@ function handleTodayRosterChange(event) {
     plan.returnOverrides[id] = returnType;
     saveDailyPlan(plan, { status: false });
     renderTodayRoster();
+    renderDispatchSheet();
+    return;
   }
+
+  if (noteInput) {
+    const id = noteInput.dataset.rosterNote;
+    plan.notes[id] = noteInput.value.trim();
+    saveDailyPlan(plan, { status: false });
+  }
+}
+
+function handleTodayRosterInput(event) {
+  const noteInput = event.target.closest("[data-roster-note]");
+  if (!noteInput) return;
+  const date = state.serviceDate || getTodayIsoDate();
+  const plan = getDailyPlan(date);
+  plan.notes[noteInput.dataset.rosterNote] = noteInput.value.trim();
+  saveDailyPlan(plan, { status: false });
 }
 
 function handleTodayRosterClick(event) {
@@ -934,9 +1292,11 @@ function handleTodayRosterClick(event) {
   const plan = getDailyPlan(date);
   plan.extraCustomerIds = plan.extraCustomerIds.filter((id) => id !== removeButton.dataset.removeExtra);
   delete plan.returnOverrides[removeButton.dataset.removeExtra];
+  delete plan.notes[removeButton.dataset.removeExtra];
   plan.absentCustomerIds = plan.absentCustomerIds.filter((id) => id !== removeButton.dataset.removeExtra);
   saveDailyPlan(plan);
   renderTodayRoster();
+  renderDispatchSheet();
 }
 
 function addExtraTodayPatient() {
@@ -975,6 +1335,7 @@ function applyTodayRosterToRoute() {
   renderVehicles();
   renderPatients();
   clearRoute();
+  renderDispatchSheet();
   logCareRouteAction("当日搭乗者反映", `${formatDateForRoster(date)}の搭乗者${entries.length}名を今日の送迎へ反映しました。`, "daily-plan", date);
   setStatus(needsWheelchairSwitch
     ? `${entries.length}名を今日の送迎へ反映しました。車いす利用者のため1号車または2号車に切り替えました。`
@@ -990,6 +1351,8 @@ function buildRoutePatientFromRoster(entry) {
     returnType: entry.returnType,
     earliest: timeWindow.earliest,
     latest: timeWindow.latest,
+    note: entry.note || "",
+    assignedVehicleId: getCompatibleVehicleId(state.vehicleId, Boolean(entry.patient.wheelchair)),
   };
 }
 
@@ -1055,11 +1418,17 @@ function normalizeDailyPlan(plan, fallbackDate = getTodayIsoDate()) {
     const returnType = normalizeReturnType(value);
     if (id && returnType) returnOverrides[id] = returnType;
   });
+  const notes = {};
+  Object.entries(plan?.notes || {}).forEach(([id, value]) => {
+    const note = String(value || "").trim();
+    if (id && note) notes[id] = note;
+  });
   return {
     date,
     absentCustomerIds: uniqueStringArray(plan?.absentCustomerIds),
     returnOverrides,
     extraCustomerIds: uniqueStringArray(plan?.extraCustomerIds),
+    notes,
   };
 }
 
@@ -1069,6 +1438,7 @@ function createEmptyDailyPlan(date) {
     absentCustomerIds: [],
     returnOverrides: {},
     extraCustomerIds: [],
+    notes: {},
   };
 }
 
@@ -1087,6 +1457,7 @@ function applyRegisteredPatientToForm(patientId, options = {}) {
   els.patientWheelchair.checked = Boolean(patient.wheelchair);
   els.patientEarliest.value = patient.earliest || "";
   els.patientLatest.value = patient.latest || "";
+  els.patientNote.value = patient.note || "";
   lastAutofilledPatientId = patient.id;
   ensureVehicleCompatibility({ status: true });
   renderVehicles();
@@ -1181,6 +1552,7 @@ function readRegistryForm() {
     wheelchair: els.registryWheelchair.checked,
     earliest: els.registryEarliest.value || "",
     latest: els.registryLatest.value || "",
+    note: els.registryNote.value.trim(),
     weeklySchedule: readWeeklyScheduleForm(),
   };
 }
@@ -1211,6 +1583,7 @@ function addRegisteredPatientToRoute(id) {
     ...registeredPatient,
     id: makeId(),
     registryId: registeredPatient.id,
+    assignedVehicleId: getCompatibleVehicleId(state.vehicleId, Boolean(registeredPatient.wheelchair)),
   });
   const changedVehicle = ensureVehicleCompatibilityForPatient(registeredPatient);
   state.activeAppTab = "plan";
@@ -1235,6 +1608,7 @@ function startEditingRegisteredPatient(id) {
   els.registryEarliest.value = registeredPatient.earliest || "";
   els.registryLatest.value = registeredPatient.latest || "";
   els.registryWheelchair.checked = Boolean(registeredPatient.wheelchair);
+  els.registryNote.value = registeredPatient.note || "";
   fillWeeklyScheduleForm(registeredPatient.weeklySchedule);
   els.registrySubmitButton.textContent = "登録内容を更新";
   els.registryCancelEditButton.hidden = false;
@@ -1285,6 +1659,7 @@ async function registerCurrentPatients() {
             wheelchair: Boolean(patient.wheelchair),
             earliest: patient.earliest || "",
             latest: patient.latest || "",
+            note: patient.note || "",
             weeklySchedule: patient.weeklySchedule || {},
           },
         });
@@ -1309,6 +1684,7 @@ async function registerCurrentPatients() {
       wheelchair: Boolean(patient.wheelchair),
       earliest: patient.earliest || "",
       latest: patient.latest || "",
+      note: patient.note || "",
       weeklySchedule: patient.weeklySchedule || {},
     });
     addedCount += 1;
@@ -1334,9 +1710,9 @@ async function loadBulkImportFile() {
 
 async function copyBulkTemplate() {
   const template = [
-    ["利用者名", "住所", "人数", "車いす", "何時以降", "何時まで", "利用曜日", "帰り区分"].join("\t"),
-    ["田中様", "川崎市川崎区大師町10-6", "1", "なし", "", "", "月,水,金", "通常"].join("\t"),
-    ["佐藤様", "川崎大師駅", "1", "あり", "", "", "火:13:30,木:通常", ""].join("\t"),
+    ["利用者名", "住所", "人数", "車いす", "何時以降", "何時まで", "利用曜日", "帰り区分", "備考"].join("\t"),
+    ["田中様", "川崎市川崎区大師町10-6", "1", "なし", "", "", "月,水,金", "通常", "玄関前で声かけ"].join("\t"),
+    ["佐藤様", "川崎大師駅", "1", "あり", "", "", "火:13:30,木:通常", "", "車いす対応"].join("\t"),
   ].join("\n");
   try {
     await navigator.clipboard.writeText(template);
@@ -1385,6 +1761,7 @@ async function commitBulkImport() {
             wheelchair: patient.wheelchair,
             earliest: patient.earliest,
             latest: patient.latest,
+            note: patient.note || "",
             weeklySchedule: patient.weeklySchedule || {},
           },
         });
@@ -1426,6 +1803,7 @@ function addPatientToTodayRoute(patient) {
     ...patient,
     id: makeId(),
     registryId: patient.id || "",
+    assignedVehicleId: getCompatibleVehicleId(state.vehicleId, Boolean(patient.wheelchair)),
   });
   ensureVehicleCompatibilityForPatient(patient);
   return 1;
@@ -1500,6 +1878,7 @@ function createBulkHeaderMap(columns) {
     if (/何時まで|終了|まで|希望終了/.test(value)) map.latest = index;
     if (/利用曜日|来所曜日|予定曜日|曜日/.test(value)) map.weekdays = index;
     if (/帰り区分|帰宅区分|帰り|帰宅|送迎区分/.test(value)) map.returnType = index;
+    if (/備考|メモ|注意|連絡事項/.test(value)) map.note = index;
   });
   return map;
 }
@@ -1515,6 +1894,7 @@ function normalizeBulkPatientRow(columns, headerMap) {
     earliest: normalizeTimeValue(pick("earliest", 4)),
     latest: normalizeTimeValue(pick("latest", 5)),
     weeklySchedule: parseWeeklyScheduleText(pick("weekdays", 6), pick("returnType", 7)),
+    note: pick("note", 8).trim(),
   };
 }
 
@@ -1665,6 +2045,7 @@ function renderBulkPreview(rows) {
       <td>${patient.wheelchair ? "あり" : "なし"}</td>
       <td>${escapeHtml(formatWindow(patient))}</td>
       <td>${escapeHtml(formatWeeklyScheduleSummary(patient.weeklySchedule))}</td>
+      <td>${escapeHtml(patient.note || "")}</td>
     </tr>
   `).join("");
   const errorHtml = rows.errors.length ? `<p>${escapeHtml(rows.errors.slice(0, 5).join(" / "))}</p>` : "";
@@ -1672,7 +2053,7 @@ function renderBulkPreview(rows) {
     <strong>${rows.valid.length}名を取り込み候補にしました。</strong>
     ${errorHtml}
     <table>
-      <thead><tr><th>利用者名</th><th>住所</th><th>人数</th><th>車いす</th><th>時間</th><th>基本曜日</th></tr></thead>
+      <thead><tr><th>利用者名</th><th>住所</th><th>人数</th><th>車いす</th><th>時間</th><th>基本曜日</th><th>備考</th></tr></thead>
       <tbody>${previewRows}</tbody>
     </table>
   `;
@@ -1682,6 +2063,7 @@ function resetRegistryForm() {
   editingRegistryId = null;
   els.registryForm.reset();
   els.registryPassengers.value = "1";
+  els.registryNote.value = "";
   fillWeeklyScheduleForm({});
   els.registrySubmitButton.textContent = "顧客を登録";
   els.registryCancelEditButton.hidden = true;
@@ -1690,6 +2072,7 @@ function resetRegistryForm() {
 async function optimizeRoute(options = {}) {
   state.startAddress = els.startAddress.value.trim();
   state.endAddress = els.endAddress.value.trim();
+  state.serviceType = normalizeServiceType(els.serviceType.value);
   state.useNowTime = els.useNowTime.checked;
   state.startTime = state.useNowTime ? getCurrentTimeValue() : els.startTime.value || "08:30";
   els.startTime.value = state.startTime;
@@ -1731,6 +2114,7 @@ async function optimizeRoute(options = {}) {
 }
 
 function validatePlan() {
+  normalizePatientVehicleAssignments();
   const vehicle = getVehicle();
   const totalPassengers = getTotalPassengers();
   const seatedPassengers = getSeatedPassengers();
@@ -1752,11 +2136,27 @@ function validatePlan() {
   if (state.patients.some((patient) => patient.earliest && patient.latest && timeToMinutes(patient.earliest) > timeToMinutes(patient.latest))) {
     blockers.push("時間制約の開始時刻が終了時刻より後になっている患者様がいます。");
   }
+  validateVehicleAssignments().forEach((message) => blockers.push(message));
   if (!wheelchairCount && totalPassengers > 5 && vehicle.id !== "car3") {
     warnings.push("座席利用が6名以上の送迎です。3号車の利用を検討してください。");
   }
   warnings.push("3分ごとの道路ルート再取得と時間帯補正で、できるだけ現在状況に近づけます。");
   return { blockers, warnings };
+}
+
+function validateVehicleAssignments() {
+  const messages = [];
+  const groups = groupPatientsByVehicle();
+  vehicles.forEach((vehicle) => {
+    const patients = groups.get(vehicle.id) || [];
+    if (!patients.length) return;
+    const seated = patients.reduce((sum, patient) => sum + (patient.wheelchair ? 0 : Number(patient.passengers || 1)), 0);
+    const wheelchair = patients.filter((patient) => patient.wheelchair).length;
+    if (seated > vehicle.capacity) messages.push(`${vehicle.name}の配車割当が座席定員を超えています。座席${seated}/${vehicle.capacity}名です。`);
+    if (wheelchair > (vehicle.wheelchairCapacity || 0)) messages.push(`${vehicle.name}の配車割当が車いす台数を超えています。車いす${wheelchair}/${vehicle.wheelchairCapacity || 0}台です。`);
+    if (wheelchair && !vehicle.wheelchair) messages.push(`${vehicle.name}には車いす利用者を割り当てできません。`);
+  });
+  return messages;
 }
 
 function findBestOrder(start, stops, end) {
@@ -1904,6 +2304,7 @@ async function fetchDrivingRoute(points) {
 
 function renderRoute(start, plan, end, route, warnings) {
   clearRoute({ focusStart: false });
+  lastRouteOrderedPatients = plan.ordered.map((stop) => ({ ...stop }));
   const points = [start, ...plan.ordered.map((item) => item.location), ...(end ? [end] : [])];
   const routeWarnings = [...warnings];
 
@@ -1932,6 +2333,7 @@ function renderRoute(start, plan, end, route, warnings) {
   const driveMinutes = route ? Math.round(route.duration / 60) : plan.estimatedMinutes;
   const durationMinutes = Math.max(plan.estimatedMinutes, Math.round(driveMinutes * getLocalTrafficFactor(timeToMinutes(state.startTime))));
   const vehicle = getVehicle();
+  const service = getServiceTypeConfig(state.serviceType);
   const checkedAt = new Date();
   const previousSnapshot = lastRouteSnapshot;
   const deltaMinutes = previousSnapshot ? durationMinutes - previousSnapshot.durationMinutes : 0;
@@ -1955,6 +2357,7 @@ function renderRoute(start, plan, end, route, warnings) {
 
   els.resultPanel.innerHTML = `
     <div class="summary-grid">
+      <div class="summary-card"><span>便区分</span><strong>${escapeHtml(service.shortLabel)}</strong></div>
       <div class="summary-card"><span>車両</span><strong>${escapeHtml(vehicle.name)}</strong></div>
       <div class="summary-card"><span>人数</span><strong>${getCapacitySummary(vehicle)}</strong></div>
       <div class="summary-card"><span>距離</span><strong>${distanceKm.toFixed(1)}km</strong></div>
@@ -1971,12 +2374,13 @@ function renderRoute(start, plan, end, route, warnings) {
           <div class="order-number">${index + 1}</div>
           <div>
             <strong>${escapeHtml(stop.name)} / ${formatMinutes(stop.eta)} 到着目安</strong>
-            <span>${escapeHtml(stop.address)} / ${escapeHtml(formatWindow(stop))}${stop.wait ? ` / 待機 ${stop.wait}分` : ""}</span>
+            <span>${escapeHtml(stop.address)} / ${escapeHtml(formatWindow(stop))}${stop.wait ? ` / 待機 ${stop.wait}分` : ""}${stop.note ? ` / 備考: ${escapeHtml(stop.note)}` : ""}</span>
           </div>
         </article>
       `).join("")}
     </div>
   `;
+  renderDispatchSheet();
 }
 
 function renderWarnings(warnings, lateMinutes) {
@@ -2021,6 +2425,7 @@ function clearRoute(options = {}) {
   markerLayer?.clearLayers();
   routeLayer?.clearLayers();
   lastRouteBounds = null;
+  lastRouteOrderedPatients = [];
   lastGoogleMapsUrl = "";
   els.googleMapsButton.disabled = true;
   if (shouldFocusStart) focusStartAddressOnMap();
@@ -2103,6 +2508,14 @@ function getTrafficFactorLabel(minute) {
 function getCurrentTimeValue() {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
+function normalizeServiceType(value) {
+  return serviceTypes[value] ? value : "morning";
+}
+
+function getServiceTypeConfig(value) {
+  return serviceTypes[normalizeServiceType(value)];
 }
 
 function getTodayIsoDate() {
@@ -2330,6 +2743,7 @@ function loadState() {
         startAddress: saved.startAddress || DEFAULT_BASE_ADDRESS,
         endAddress: saved.endAddress || DEFAULT_BASE_ADDRESS,
         startTime: saved.startTime || "08:30",
+        serviceType: normalizeServiceType(saved.serviceType),
         useNowTime: saved.useNowTime !== false,
         autoRefresh: Boolean(saved.autoRefresh),
         vehicleId: saved.vehicleId || "car1",
@@ -2347,6 +2761,7 @@ function loadState() {
     startAddress: DEFAULT_BASE_ADDRESS,
     endAddress: DEFAULT_BASE_ADDRESS,
     startTime: "08:30",
+    serviceType: "morning",
     useNowTime: true,
     autoRefresh: false,
     vehicleId: "car1",
@@ -2364,6 +2779,7 @@ function persist() {
       startAddress: state.startAddress,
       endAddress: state.endAddress,
       startTime: state.startTime,
+      serviceType: state.serviceType,
       useNowTime: state.useNowTime,
       autoRefresh: state.autoRefresh,
       vehicleId: state.vehicleId,

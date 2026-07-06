@@ -1821,6 +1821,7 @@ function normalizeCareRouteCustomer(customer) {
     wheelchair: Boolean(customer.wheelchair),
     earliest: String(customer.earliest || ""),
     latest: String(customer.latest || ""),
+    note: String(customer.note || "").trim(),
     weeklySchedule: normalizeCareRouteWeeklySchedule(customer.weeklySchedule),
     createdAt: customer.createdAt || new Date().toISOString(),
     createdBy: String(customer.createdBy || ""),
@@ -2512,6 +2513,7 @@ function normalizeCareRouteCustomerInput(body) {
     wheelchair: Boolean(body.wheelchair),
     earliest,
     latest,
+    note: String(body.note || "").trim().slice(0, 300),
     weeklySchedule: normalizeCareRouteWeeklySchedule(body.weeklySchedule),
   };
 }
@@ -2542,12 +2544,19 @@ function normalizeCareRouteDailyPlan(plan) {
     const returnType = normalizeCareRouteReturnType(value);
     if (id && returnType) returnOverrides[id] = returnType;
   });
+  const notes = {};
+  Object.entries(plan.notes || {}).forEach(([customerId, value]) => {
+    const id = String(customerId || "").trim();
+    const note = String(value || "").trim().slice(0, 300);
+    if (id && note) notes[id] = note;
+  });
   return {
     id: String(plan.id || `daily-${plan.date}`),
     date: String(plan.date),
     absentCustomerIds: uniqueCareRouteIds(plan.absentCustomerIds),
     returnOverrides,
     extraCustomerIds: uniqueCareRouteIds(plan.extraCustomerIds),
+    notes,
     createdAt: plan.createdAt || new Date().toISOString(),
     createdBy: String(plan.createdBy || ""),
     createdByName: String(plan.createdByName || ""),
@@ -2574,6 +2583,7 @@ function createEmptyCareRouteDailyPlan(date) {
     absentCustomerIds: [],
     returnOverrides: {},
     extraCustomerIds: [],
+    notes: {},
     createdAt: now,
     createdBy: "",
     createdByName: "",
@@ -2599,6 +2609,9 @@ function upsertCareRouteDailyPlan(body, user) {
   normalized.extraCustomerIds = normalized.extraCustomerIds.filter((id) => validCustomerIds.has(id));
   Object.keys(normalized.returnOverrides).forEach((id) => {
     if (!validCustomerIds.has(id)) delete normalized.returnOverrides[id];
+  });
+  Object.keys(normalized.notes).forEach((id) => {
+    if (!validCustomerIds.has(id)) delete normalized.notes[id];
   });
 
   const existingIndex = careRouteStore.routeDrafts.findIndex((plan) => plan.date === date);
@@ -2635,12 +2648,15 @@ function deleteCareRouteCustomer(id, user) {
   careRouteStore.customers = careRouteStore.customers.filter((item) => item.id !== customerId);
   careRouteStore.routeDrafts = careRouteStore.routeDrafts.map((plan) => {
     const returnOverrides = { ...(plan.returnOverrides || {}) };
+    const notes = { ...(plan.notes || {}) };
     delete returnOverrides[customerId];
+    delete notes[customerId];
     return {
       ...plan,
       absentCustomerIds: uniqueCareRouteIds(plan.absentCustomerIds).filter((id) => id !== customerId),
       returnOverrides,
       extraCustomerIds: uniqueCareRouteIds(plan.extraCustomerIds).filter((id) => id !== customerId),
+      notes,
     };
   });
   careRouteStore.deletedCustomers.unshift({

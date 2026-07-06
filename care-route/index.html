@@ -79,6 +79,13 @@
                   <span>出発予定</span>
                   <input id="startTime" type="time" value="08:30" />
                 </label>
+                <label>
+                  <span>便区分</span>
+                  <select id="serviceType">
+                    <option value="morning">朝の送迎（迎え）</option>
+                    <option value="evening">夕方の送迎（送り）</option>
+                  </select>
+                </label>
                 <label class="check-line compact-check">
                   <input id="useNowTime" type="checkbox" checked />
                   <span>計算時は現在時刻を使う</span>
@@ -167,9 +174,14 @@
                   <input id="patientWheelchair" type="checkbox" />
                   <span>車いす利用</span>
                 </label>
+                <label>
+                  <span>配車表の備考</span>
+                  <textarea id="patientNote" rows="2" placeholder="例: 玄関前で声かけ / 杖あり / 家族へ連絡"></textarea>
+                </label>
                 <button class="secondary-button" type="submit">今日の送迎に追加</button>
               </form>
               <div class="quick-actions">
+                <button class="ghost-button" id="autoAssignVehiclesButton" type="button">車両を自動割当</button>
                 <button class="ghost-button" id="clearPatientsButton" type="button">患者様を全て削除</button>
               </div>
               <div class="patient-list" id="patientList"></div>
@@ -199,6 +211,25 @@
               <div class="empty-result">
                 <strong>まだルートは作成されていません</strong>
                 <span>送迎登録で「最速ルートを作成」を押すと、順番・到着目安・注意点が表示されます。</span>
+              </div>
+            </section>
+            <section class="dispatch-panel" id="dispatchSheetPanel">
+              <div class="dispatch-toolbar">
+                <div>
+                  <p class="eyebrow">配車表</p>
+                  <h2>各車別・ドライバー用</h2>
+                </div>
+                <div class="dispatch-actions">
+                  <button class="ghost-button compact" id="copyDispatchSheetButton" type="button" disabled>Excelへコピー</button>
+                  <button class="ghost-button compact" id="downloadDispatchCsvButton" type="button" disabled>CSV出力</button>
+                  <button class="ghost-button compact" id="printDispatchSheetButton" type="button" disabled>印刷表示</button>
+                </div>
+              </div>
+              <div class="dispatch-sheet-body" id="dispatchSheetBody">
+                <div class="empty-result">
+                  <strong>配車表はまだ作成されていません</strong>
+                  <span>送迎対象を追加し、必要に応じて車両と備考を整えると、各車別の配車表を出力できます。</span>
+                </div>
               </div>
             </section>
             <section class="notice-panel">
@@ -244,6 +275,10 @@
                 <label class="check-line">
                   <input id="registryWheelchair" type="checkbox" />
                   <span>車いす利用</span>
+                </label>
+                <label>
+                  <span>配車表の標準備考</span>
+                  <textarea id="registryNote" rows="2" placeholder="例: 玄関前で声かけ / 杖あり / 家族へ連絡"></textarea>
                 </label>
                 <fieldset class="weekly-schedule">
                   <legend>基本利用曜日・帰り時間</legend>
@@ -319,8 +354,8 @@
               <details class="bulk-import-panel" open>
                 <summary>Excel一覧からまとめて登録</summary>
                 <div class="bulk-import-body">
-                  <p>Excelから表をコピーして貼り付けるか、CSVファイルを選んでください。列は「利用者名、住所、人数、車いす、何時以降、何時まで、利用曜日、帰り区分」の順で取り込めます。曜日は「月,水,金」または「月:通常,水:13:30」のように入力できます。</p>
-                  <textarea id="bulkImportText" rows="7" placeholder="利用者名&#9;住所&#9;人数&#9;車いす&#9;何時以降&#9;何時まで&#9;利用曜日&#9;帰り区分&#10;田中様&#9;川崎市川崎区大師町10-6&#9;1&#9;なし&#9;&#9;&#9;月,水,金&#9;通常"></textarea>
+                  <p>Excelから表をコピーして貼り付けるか、CSVファイルを選んでください。列は「利用者名、住所、人数、車いす、何時以降、何時まで、利用曜日、帰り区分、備考」の順で取り込めます。曜日は「月,水,金」または「月:通常,水:13:30」のように入力できます。</p>
+                  <textarea id="bulkImportText" rows="7" placeholder="利用者名&#9;住所&#9;人数&#9;車いす&#9;何時以降&#9;何時まで&#9;利用曜日&#9;帰り区分&#9;備考&#10;田中様&#9;川崎市川崎区大師町10-6&#9;1&#9;なし&#9;&#9;&#9;月,水,金&#9;通常&#9;玄関前で声かけ"></textarea>
                   <div class="bulk-import-tools">
                     <input id="bulkImportFile" type="file" accept=".csv,.txt,text/csv,text/plain" />
                     <label class="check-line compact-check">
