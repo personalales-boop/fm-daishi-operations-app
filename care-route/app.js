@@ -980,13 +980,14 @@ function renderDispatchSheet() {
           <div>
             <strong>${escapeHtml(vehicle.name)} / ${escapeHtml(service.shortLabel)}</strong>
             <span>${escapeHtml(state.serviceDate || getTodayIsoDate())} ${escapeHtml(state.startTime || service.defaultStartTime)} 出発 / ${vehicle.wheelchair ? `車いす${vehicle.wheelchairCapacity}台対応` : "座席車"}</span>
+            <span>${escapeHtml(getVehicleOperationNote(vehicle, vehicleRows))}</span>
           </div>
           <span>${vehicleRows.length}件</span>
         </div>
         <div class="dispatch-table-wrap">
           <table class="dispatch-table">
             <thead>
-              <tr><th>順番</th><th>目安</th><th>利用者</th><th>住所</th><th>人数</th><th>区分</th><th>備考</th></tr>
+              <tr><th>順番</th><th>目安</th><th>利用者</th><th>住所</th><th>人数</th><th>区分</th><th>乗車時注意</th><th>備考</th></tr>
             </thead>
             <tbody>
               ${vehicleRows.map((row) => `
@@ -997,6 +998,7 @@ function renderDispatchSheet() {
                   <td>${escapeHtml(row.address)}</td>
                   <td>${escapeHtml(row.passengers)}</td>
                   <td>${escapeHtml(row.wheelchair ? "車いす" : service.actionLabel)}</td>
+                  <td>${escapeHtml(row.boardingNote)}</td>
                   <td>${escapeHtml(row.note || "")}</td>
                 </tr>
               `).join("")}
@@ -1038,11 +1040,25 @@ function buildDispatchRows() {
       wheelchair: Boolean(patient.wheelchair),
       note: patient.note || "",
       window: formatWindow(patient),
+      boardingNote: getBoardingNote(patient, assignedVehicle),
     };
   }).sort((a, b) => {
     const vehicleIndex = vehicles.findIndex((vehicle) => vehicle.id === a.vehicleId) - vehicles.findIndex((vehicle) => vehicle.id === b.vehicleId);
     return vehicleIndex || a.order - b.order;
   });
+}
+
+function getBoardingNote(patient, vehicle) {
+  if (patient.wheelchair) return "車いす固定位置・ベルト確認";
+  if (vehicle.wheelchair) return "車いす仕様車の普通席利用";
+  return "";
+}
+
+function getVehicleOperationNote(vehicle, vehicleRows) {
+  if (!vehicle.wheelchair) return "通常座席運用";
+  const wheelchairCount = vehicleRows.filter((row) => row.wheelchair).length;
+  if (wheelchairCount > 0) return "車いす利用者を優先して固定位置と乗車順を確認";
+  return "車いす利用者なし。車いす仕様車を普通席運用として使用";
 }
 
 function groupDispatchRowsByVehicle(rows) {
@@ -1098,7 +1114,7 @@ function buildDispatchSheetText(delimiter, options = {}) {
   const rows = buildDispatchRows();
   if (!rows.length) return "";
   const service = getServiceTypeConfig(state.serviceType);
-  const header = ["日付", "便区分", "出発予定", "車両", "順番", "到着目安", "利用者", "住所", "人数", "車いす", "時間指定", "備考"];
+  const header = ["日付", "便区分", "出発予定", "車両", "順番", "到着目安", "利用者", "住所", "人数", "車いす", "時間指定", "乗車時注意", "備考"];
   const lines = [header];
   rows.forEach((row) => {
     lines.push([
@@ -1113,6 +1129,7 @@ function buildDispatchSheetText(delimiter, options = {}) {
       row.passengers,
       row.wheelchair ? "あり" : "なし",
       row.window,
+      row.boardingNote,
       row.note || "",
     ]);
   });
@@ -1196,6 +1213,16 @@ function renderTodayRoster() {
               <option value="early" ${entry.returnType === "early" ? "selected" : ""}>13:30帰り</option>
             </select>
           </label>
+          <div class="roster-time-grid">
+            <label>
+              <span>${escapeHtml(getServiceTimeLabel("earliest"))}</span>
+              <input type="time" data-roster-earliest="${escapeHtml(entry.patient.id)}" value="${escapeHtml(entry.earliest || "")}" ${entry.absent ? "disabled" : ""} />
+            </label>
+            <label>
+              <span>${escapeHtml(getServiceTimeLabel("latest"))}</span>
+              <input type="time" data-roster-latest="${escapeHtml(entry.patient.id)}" value="${escapeHtml(entry.latest || "")}" ${entry.absent ? "disabled" : ""} />
+            </label>
+          </div>
           <label>
             <span>配車表の備考</span>
             <textarea rows="2" data-roster-note="${escapeHtml(entry.patient.id)}" ${entry.absent ? "disabled" : ""} placeholder="ドライバーへ伝える内容">${escapeHtml(entry.note || "")}</textarea>
@@ -1231,11 +1258,14 @@ function buildRosterEntry(patient, date, isExtra) {
   const schedule = normalizeWeeklySchedule(patient.weeklySchedule);
   const defaultReturnType = schedule[weekday.id] || "normal";
   const returnType = normalizeReturnType(plan.returnOverrides[patient.id]) || defaultReturnType;
+  const timeWindow = getRosterTimeWindow(patient, date, returnType);
   return {
     patient,
     isExtra,
     absent: plan.absentCustomerIds.includes(patient.id),
     returnType,
+    earliest: timeWindow.earliest,
+    latest: timeWindow.latest,
     note: plan.notes[patient.id] ?? patient.note ?? "",
   };
 }
@@ -1243,6 +1273,8 @@ function buildRosterEntry(patient, date, isExtra) {
 function handleTodayRosterChange(event) {
   const absentInput = event.target.closest("[data-roster-absent]");
   const returnSelect = event.target.closest("[data-roster-return]");
+  const earliestInput = event.target.closest("[data-roster-earliest]");
+  const latestInput = event.target.closest("[data-roster-latest]");
   const noteInput = event.target.closest("[data-roster-note]");
   const date = state.serviceDate || getTodayIsoDate();
   const plan = getDailyPlan(date);
@@ -1263,8 +1295,25 @@ function handleTodayRosterChange(event) {
     const id = returnSelect.dataset.rosterReturn;
     const returnType = normalizeReturnType(returnSelect.value) || "normal";
     plan.returnOverrides[id] = returnType;
+    const patient = state.registeredPatients.find((item) => item.id === id);
+    if (patient) {
+      const timeWindow = getRosterTimeWindow(patient, date, returnType, { ignoreOverride: true });
+      plan.timeOverrides[id] = timeWindow;
+    }
     saveDailyPlan(plan, { status: false });
     renderTodayRoster();
+    renderDispatchSheet();
+    return;
+  }
+
+  if (earliestInput || latestInput) {
+    const id = earliestInput?.dataset.rosterEarliest || latestInput?.dataset.rosterLatest;
+    const current = plan.timeOverrides[id] || {};
+    plan.timeOverrides[id] = {
+      earliest: earliestInput ? earliestInput.value : current.earliest || "",
+      latest: latestInput ? latestInput.value : current.latest || "",
+    };
+    saveDailyPlan(plan, { status: false });
     renderDispatchSheet();
     return;
   }
@@ -1292,6 +1341,7 @@ function handleTodayRosterClick(event) {
   const plan = getDailyPlan(date);
   plan.extraCustomerIds = plan.extraCustomerIds.filter((id) => id !== removeButton.dataset.removeExtra);
   delete plan.returnOverrides[removeButton.dataset.removeExtra];
+  delete plan.timeOverrides[removeButton.dataset.removeExtra];
   delete plan.notes[removeButton.dataset.removeExtra];
   plan.absentCustomerIds = plan.absentCustomerIds.filter((id) => id !== removeButton.dataset.removeExtra);
   saveDailyPlan(plan);
@@ -1343,17 +1393,46 @@ function applyTodayRosterToRoute() {
 }
 
 function buildRoutePatientFromRoster(entry) {
-  const timeWindow = returnTypes[entry.returnType] || returnTypes.normal;
   return {
     ...entry.patient,
     id: makeId(),
     registryId: entry.patient.id,
     returnType: entry.returnType,
-    earliest: timeWindow.earliest,
-    latest: timeWindow.latest,
+    earliest: entry.earliest || "",
+    latest: entry.latest || "",
     note: entry.note || "",
     assignedVehicleId: getCompatibleVehicleId(state.vehicleId, Boolean(entry.patient.wheelchair)),
   };
+}
+
+function getRosterTimeWindow(patient, date, returnType, options = {}) {
+  const plan = getDailyPlan(date);
+  const override = options.ignoreOverride ? null : plan.timeOverrides[patient.id];
+  if (override?.earliest || override?.latest) {
+    return {
+      earliest: override.earliest || "",
+      latest: override.latest || "",
+    };
+  }
+
+  if (normalizeServiceType(state.serviceType) === "evening") {
+    const fallback = returnTypes[returnType] || returnTypes.normal;
+    return {
+      earliest: patient.earliest || fallback.earliest,
+      latest: patient.latest || fallback.latest,
+    };
+  }
+
+  return {
+    earliest: patient.earliest || "",
+    latest: patient.latest || "",
+  };
+}
+
+function getServiceTimeLabel(kind) {
+  const service = getServiceTypeConfig(state.serviceType);
+  if (kind === "latest") return service.actionLabel === "送り" ? "送り希望終了" : "迎え希望終了";
+  return service.actionLabel === "送り" ? "送り希望開始" : "迎え希望開始";
 }
 
 async function loadDailyPlanForDate(date, options = {}) {
@@ -1418,6 +1497,13 @@ function normalizeDailyPlan(plan, fallbackDate = getTodayIsoDate()) {
     const returnType = normalizeReturnType(value);
     if (id && returnType) returnOverrides[id] = returnType;
   });
+  const timeOverrides = {};
+  Object.entries(plan?.timeOverrides || {}).forEach(([id, value]) => {
+    if (!id || !value || typeof value !== "object") return;
+    const earliest = normalizeTimeValue(value.earliest);
+    const latest = normalizeTimeValue(value.latest);
+    if (earliest || latest) timeOverrides[id] = { earliest, latest };
+  });
   const notes = {};
   Object.entries(plan?.notes || {}).forEach(([id, value]) => {
     const note = String(value || "").trim();
@@ -1427,6 +1513,7 @@ function normalizeDailyPlan(plan, fallbackDate = getTodayIsoDate()) {
     date,
     absentCustomerIds: uniqueStringArray(plan?.absentCustomerIds),
     returnOverrides,
+    timeOverrides,
     extraCustomerIds: uniqueStringArray(plan?.extraCustomerIds),
     notes,
   };
@@ -1437,6 +1524,7 @@ function createEmptyDailyPlan(date) {
     date,
     absentCustomerIds: [],
     returnOverrides: {},
+    timeOverrides: {},
     extraCustomerIds: [],
     notes: {},
   };

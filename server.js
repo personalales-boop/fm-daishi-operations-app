@@ -2544,6 +2544,16 @@ function normalizeCareRouteDailyPlan(plan) {
     const returnType = normalizeCareRouteReturnType(value);
     if (id && returnType) returnOverrides[id] = returnType;
   });
+  const timeOverrides = {};
+  Object.entries(plan.timeOverrides || {}).forEach(([customerId, value]) => {
+    const id = String(customerId || "").trim();
+    if (!id || !value || typeof value !== "object") return;
+    const earliest = String(value.earliest || "").trim();
+    const latest = String(value.latest || "").trim();
+    if (earliest && !isValidTime(earliest)) return;
+    if (latest && !isValidTime(latest)) return;
+    if (earliest || latest) timeOverrides[id] = { earliest, latest };
+  });
   const notes = {};
   Object.entries(plan.notes || {}).forEach(([customerId, value]) => {
     const id = String(customerId || "").trim();
@@ -2555,6 +2565,7 @@ function normalizeCareRouteDailyPlan(plan) {
     date: String(plan.date),
     absentCustomerIds: uniqueCareRouteIds(plan.absentCustomerIds),
     returnOverrides,
+    timeOverrides,
     extraCustomerIds: uniqueCareRouteIds(plan.extraCustomerIds),
     notes,
     createdAt: plan.createdAt || new Date().toISOString(),
@@ -2582,6 +2593,7 @@ function createEmptyCareRouteDailyPlan(date) {
     date,
     absentCustomerIds: [],
     returnOverrides: {},
+    timeOverrides: {},
     extraCustomerIds: [],
     notes: {},
     createdAt: now,
@@ -2609,6 +2621,9 @@ function upsertCareRouteDailyPlan(body, user) {
   normalized.extraCustomerIds = normalized.extraCustomerIds.filter((id) => validCustomerIds.has(id));
   Object.keys(normalized.returnOverrides).forEach((id) => {
     if (!validCustomerIds.has(id)) delete normalized.returnOverrides[id];
+  });
+  Object.keys(normalized.timeOverrides).forEach((id) => {
+    if (!validCustomerIds.has(id)) delete normalized.timeOverrides[id];
   });
   Object.keys(normalized.notes).forEach((id) => {
     if (!validCustomerIds.has(id)) delete normalized.notes[id];
@@ -2648,13 +2663,16 @@ function deleteCareRouteCustomer(id, user) {
   careRouteStore.customers = careRouteStore.customers.filter((item) => item.id !== customerId);
   careRouteStore.routeDrafts = careRouteStore.routeDrafts.map((plan) => {
     const returnOverrides = { ...(plan.returnOverrides || {}) };
+    const timeOverrides = { ...(plan.timeOverrides || {}) };
     const notes = { ...(plan.notes || {}) };
     delete returnOverrides[customerId];
+    delete timeOverrides[customerId];
     delete notes[customerId];
     return {
       ...plan,
       absentCustomerIds: uniqueCareRouteIds(plan.absentCustomerIds).filter((id) => id !== customerId),
       returnOverrides,
+      timeOverrides,
       extraCustomerIds: uniqueCareRouteIds(plan.extraCustomerIds).filter((id) => id !== customerId),
       notes,
     };
