@@ -265,6 +265,7 @@ function bindEvents() {
   els.bulkImportText.addEventListener("input", () => {
     pendingBulkPatients = [];
     els.bulkCommitButton.disabled = true;
+    syncRegisteredPatientInputs();
   });
   els.bulkImportFile.addEventListener("change", loadBulkImportFile);
   els.loginForm.addEventListener("submit", handleLogin);
@@ -834,9 +835,7 @@ function renderRegisteredPatients() {
 }
 
 function syncRegisteredPatientInputs(list = null) {
-  const registeredPatients = list || (careRole === "driver"
-    ? []
-    : [...state.registeredPatients].sort((a, b) => a.name.localeCompare(b.name, "ja")));
+  const registeredPatients = getSelectableRegisteredPatients(list);
   const currentValue = els.registeredPatientSelect.value;
 
   els.registeredPatientSelect.innerHTML = `
@@ -853,7 +852,34 @@ function syncRegisteredPatientInputs(list = null) {
 }
 
 function buildRegisteredPatientOptionLabel(patient) {
-  return `${patient.name}${patient.wheelchair ? " / 車いす" : ""} / ${patient.address}`;
+  const status = patient.isPendingImport ? " / 登録前" : "";
+  return `${patient.name}${patient.wheelchair ? " / 車いす" : ""}${status} / ${patient.address}`;
+}
+
+function getSelectableRegisteredPatients(list = null) {
+  if (careRole === "driver") return [];
+  const registeredPatients = list || [...state.registeredPatients].sort(comparePatientNames);
+  if (!pendingBulkPatients.length) return registeredPatients;
+
+  const seen = new Set(registeredPatients.map((patient) => getPatientRecordKey(patient)));
+  const pendingPatients = pendingBulkPatients
+    .filter((patient) => !seen.has(getPatientRecordKey(patient)))
+    .map((patient) => ({ ...patient, isPendingImport: true }));
+  return [...registeredPatients, ...pendingPatients].sort(comparePatientNames);
+}
+
+function getRegisteredPatientById(patientId) {
+  return state.registeredPatients.find((item) => item.id === patientId) ||
+    pendingBulkPatients.find((item) => item.id === patientId) ||
+    null;
+}
+
+function comparePatientNames(a, b) {
+  return String(a.name || "").localeCompare(String(b.name || ""), "ja");
+}
+
+function getPatientRecordKey(patient) {
+  return `${normalizeText(patient?.name)}:${normalizeText(patient?.address)}`;
 }
 
 function handlePatientListChange(event) {
@@ -1535,7 +1561,7 @@ function uniqueStringArray(value) {
 }
 
 function applyRegisteredPatientToForm(patientId, options = {}) {
-  const patient = state.registeredPatients.find((item) => item.id === patientId);
+  const patient = getRegisteredPatientById(patientId);
   if (!patient) return false;
 
   els.registeredPatientSelect.value = patient.id;
@@ -1576,7 +1602,7 @@ function findRegisteredPatientByName(name) {
   const normalizedName = normalizeText(name);
   if (!normalizedName || normalizedName.length < 2) return null;
 
-  const registeredPatients = careRole === "driver" ? [] : state.registeredPatients;
+  const registeredPatients = getSelectableRegisteredPatients();
   const exact = registeredPatients.find((patient) => normalizeText(patient.name) === normalizedName);
   if (exact) return exact;
 
@@ -1791,6 +1817,7 @@ async function loadBulkImportFile() {
     els.bulkImportText.value = imported.text;
     pendingBulkPatients = [];
     els.bulkCommitButton.disabled = true;
+    syncRegisteredPatientInputs();
     setStatus(`${imported.label}を読み込みました。内容を確認してください。`);
   } catch (error) {
     setStatus(error.message || "ファイルを読み込めませんでした。CSV、テキスト、Excelで保存してから再度選択してください。", true);
@@ -1868,12 +1895,13 @@ function previewBulkImport() {
   const rows = parseBulkPatients(els.bulkImportText.value);
   pendingBulkPatients = rows.valid;
   els.bulkCommitButton.disabled = pendingBulkPatients.length === 0 || !canEditCustomers();
+  syncRegisteredPatientInputs();
   renderBulkPreview(rows);
   if (!rows.valid.length) {
     setStatus("取り込める利用者が見つかりません。利用者名と住所を確認してください。", true);
     return;
   }
-  setStatus(`${rows.valid.length}名を確認しました。問題なければ登録してください。`);
+  setStatus(`${rows.valid.length}名を確認しました。送迎登録のプルダウンから選択できます。問題なければ登録してください。`);
 }
 
 async function commitBulkImport() {
