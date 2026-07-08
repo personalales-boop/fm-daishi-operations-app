@@ -1787,13 +1787,66 @@ async function loadBulkImportFile() {
   const file = els.bulkImportFile.files?.[0];
   if (!file) return;
   try {
-    els.bulkImportText.value = await file.text();
+    const imported = await readBulkImportFile(file);
+    els.bulkImportText.value = imported.text;
     pendingBulkPatients = [];
     els.bulkCommitButton.disabled = true;
-    setStatus("ファイルを読み込みました。内容を確認してください。");
-  } catch {
-    setStatus("ファイルを読み込めませんでした。CSVまたはテキストで保存してから再度選択してください。", true);
+    setStatus(`${imported.label}を読み込みました。内容を確認してください。`);
+  } catch (error) {
+    setStatus(error.message || "ファイルを読み込めませんでした。CSV、テキスト、Excelで保存してから再度選択してください。", true);
   }
+}
+
+async function readBulkImportFile(file) {
+  const fileName = String(file.name || "").toLowerCase();
+  if (/\.(xlsx|xlsm|xls)$/i.test(fileName)) {
+    return readExcelBulkImportFile(file);
+  }
+  return {
+    label: "CSV/テキストファイル",
+    text: await file.text(),
+  };
+}
+
+async function readExcelBulkImportFile(file) {
+  if (!window.XLSX) {
+    throw new Error("Excel読み込みライブラリを取得できませんでした。CSVで保存してから再度選択してください。");
+  }
+  const data = await file.arrayBuffer();
+  const workbook = window.XLSX.read(data, { type: "array", cellDates: false });
+  const sheets = workbook.SheetNames
+    .map((sheetName) => {
+      const sheet = workbook.Sheets[sheetName];
+      const rows = window.XLSX.utils.sheet_to_json(sheet, {
+        header: 1,
+        blankrows: false,
+        defval: "",
+        raw: false,
+      });
+      return {
+        sheetName,
+        rows: rows.map((row) => row.map((cell) => String(cell ?? "").trim())),
+      };
+    })
+    .filter((sheet) => sheet.rows.some((row) => row.some(Boolean)));
+
+  if (!sheets.length) throw new Error("Excel内に取り込める表が見つかりませんでした。");
+
+  return {
+    label: `Excelファイル（${sheets.length}シート）`,
+    text: stringifyWorkbookRowsForBulkImport(sheets),
+  };
+}
+
+function stringifyWorkbookRowsForBulkImport(sheets) {
+  return sheets
+    .flatMap((sheet) => [
+      [`# シート: ${sheet.sheetName}`],
+      ...sheet.rows,
+      [],
+    ])
+    .map((row) => row.map((cell) => String(cell ?? "").replace(/\t/g, " ").replace(/\r?\n/g, " ")).join("\t"))
+    .join("\n");
 }
 
 async function copyBulkTemplate() {
@@ -1901,31 +1954,60 @@ function parseBulkPatients(rawText) {
   const lines = String(rawText || "")
     .replace(/\r\n?/g, "\n")
     .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const result = { valid: [], errors: [] };
-  if (!lines.length) return result;
-
+    .map((line) => line.trim());
   const delimiter = lines.some((line) => line.includes("\t")) ? "\t" : ",";
-  let headerMap = null;
+  const rows = lines
+    .map((line) => delimiter === "\t" ? line.split("\t") : parseCsvLine(line))
+    .map((columns) => columns.map((column) => column.trim()));
+  return parseBulkPatientRows(rows);
+}
 
-  lines.forEach((line, index) => {
-    const columns = delimiter === "\t" ? line.split("\t") : parseCsvLine(line);
+function parseBulkPatientRows(rows) {
+  const result = { valid: [], errors: [] };
+  const seen = new Set();
+  let headerMap = null;
+  let activeSheet = "";
+
+  rows.forEach((columns, index) => {
     const normalizedColumns = columns.map((column) => column.trim());
-    if (index === 0 && looksLikeBulkHeader(normalizedColumns)) {
+    if (!normalizedColumns.some(Boolean)) return;
+    const nonEmptyCount = normalizedColumns.filter(Boolean).length;
+
+    const sheetLabel = getSheetMarker(normalizedColumns);
+    if (sheetLabel) {
+      activeSheet = sheetLabel;
+      headerMap = null;
+      return;
+    }
+
+    if (looksLikeBulkHeader(normalizedColumns)) {
       headerMap = createBulkHeaderMap(normalizedColumns);
       return;
     }
 
+    if (!headerMap && nonEmptyCount < 2) return;
+
     const patient = normalizeBulkPatientRow(normalizedColumns, headerMap);
+    if (!patient.name && !patient.address) return;
     if (!patient.name || !patient.address) {
-      result.errors.push(`${index + 1}行目: 利用者名または住所がありません。`);
+      const rowLabel = activeSheet ? `${activeSheet} ${index + 1}行目` : `${index + 1}行目`;
+      result.errors.push(`${rowLabel}: 利用者名または住所がありません。`);
       return;
     }
+
+    const key = `${normalizeText(patient.name)}:${normalizeText(patient.address)}`;
+    if (seen.has(key)) return;
+    seen.add(key);
     result.valid.push(patient);
   });
 
   return result;
+}
+
+function getSheetMarker(columns) {
+  const first = String(columns[0] || "").trim();
+  const match = first.match(/^#\s*シート[:：]\s*(.+)$/);
+  return match ? match[1].trim() : "";
 }
 
 function parseCsvLine(line) {
@@ -1951,28 +2033,57 @@ function parseCsvLine(line) {
 }
 
 function looksLikeBulkHeader(columns) {
-  return columns.some((column) => /利用者|氏名|名前|お名前|住所|車いす|車椅子/.test(column));
+  const headerScore = createBulkHeaderMap(columns).score || 0;
+  return headerScore >= 2;
 }
 
 function createBulkHeaderMap(columns) {
-  const map = {};
+  const map = { weekdayColumns: {}, score: 0 };
   columns.forEach((column, index) => {
     const value = normalizeText(column);
-    if (/利用者名|氏名|名前|お名前/.test(value)) map.name = index;
-    if (/住所|所在地|送迎先/.test(value)) map.address = index;
-    if (/人数|利用人数|座席人数/.test(value)) map.passengers = index;
-    if (/車いす|車イス|車椅子/.test(value)) map.wheelchair = index;
-    if (/何時以降|開始|以降|希望開始/.test(value)) map.earliest = index;
-    if (/何時まで|終了|まで|希望終了/.test(value)) map.latest = index;
-    if (/利用曜日|来所曜日|予定曜日|曜日/.test(value)) map.weekdays = index;
-    if (/帰り区分|帰宅区分|帰り|帰宅|送迎区分/.test(value)) map.returnType = index;
-    if (/備考|メモ|注意|連絡事項/.test(value)) map.note = index;
+    if (!value) return;
+    const weekdayId = getWeekdayHeaderId(value);
+    if (weekdayId) {
+      map.weekdayColumns[weekdayId] = index;
+      map.score += 1;
+      return;
+    }
+    if (/^(利用者名|利用者氏名|利用者|氏名|名前|お名前|患者名|患者|利用者様|患者様)$/.test(value)) {
+      map.name = index;
+      map.score += 2;
+    } else if (/住所|所在地|送迎先|自宅|居宅|住まい/.test(value)) {
+      map.address = index;
+      map.score += 2;
+    } else if (/人数|利用人数|座席人数|乗車人数|同乗/.test(value)) {
+      map.passengers = index;
+      map.score += 1;
+    } else if (/車いす|車イス|車椅子|車イス|wheelchair|^wc$/i.test(value)) {
+      map.wheelchair = index;
+      map.score += 1;
+    } else if (/何時以降|希望開始|開始希望|迎え以降|送り以降|以降|開始/.test(value)) {
+      map.earliest = index;
+      map.score += 1;
+    } else if (/何時まで|希望終了|終了希望|迎えまで|送りまで|まで|終了/.test(value)) {
+      map.latest = index;
+      map.score += 1;
+    } else if (/利用曜日|来所曜日|通所曜日|予定曜日|利用日|通所日|来所日|週間利用|一週間|1週間/.test(value)) {
+      map.weekdays = index;
+      map.score += 1;
+    } else if (/帰り区分|帰宅区分|帰り時間|帰宅時間|帰り|帰宅|送迎区分|通常早帰り/.test(value)) {
+      map.returnType = index;
+      map.score += 1;
+    } else if (/備考|メモ|注意|連絡事項|特記事項|申し送り|引継|引き継ぎ/.test(value)) {
+      map.note = index;
+      map.score += 1;
+    }
   });
   return map;
 }
 
 function normalizeBulkPatientRow(columns, headerMap) {
   const pick = (key, fallbackIndex) => columns[headerMap?.[key] ?? fallbackIndex] || "";
+  const textSchedule = parseWeeklyScheduleText(pick("weekdays", 6), pick("returnType", 7));
+  const weekdayColumnSchedule = parseWeekdayColumnSchedule(columns, headerMap);
   return {
     id: makeId(),
     name: pick("name", 0).trim(),
@@ -1981,9 +2092,24 @@ function normalizeBulkPatientRow(columns, headerMap) {
     wheelchair: normalizeWheelchairValue(pick("wheelchair", 3)),
     earliest: normalizeTimeValue(pick("earliest", 4)),
     latest: normalizeTimeValue(pick("latest", 5)),
-    weeklySchedule: parseWeeklyScheduleText(pick("weekdays", 6), pick("returnType", 7)),
+    weeklySchedule: { ...textSchedule, ...weekdayColumnSchedule },
     note: pick("note", 8).trim(),
   };
+}
+
+function parseWeekdayColumnSchedule(columns, headerMap) {
+  const schedule = {};
+  Object.entries(headerMap?.weekdayColumns || {}).forEach(([weekdayId, index]) => {
+    const returnType = normalizeWeekdayCellReturnType(columns[index]);
+    if (returnType) schedule[weekdayId] = returnType;
+  });
+  return schedule;
+}
+
+function normalizeWeekdayCellReturnType(value) {
+  const text = String(value || "").trim();
+  if (!text || /^(なし|無|休|休み|欠席|×|x|no|false|-|ー|－)$/i.test(text)) return "";
+  return normalizeReturnType(text) || "normal";
 }
 
 function normalizePassengerCount(value) {
@@ -2110,6 +2236,18 @@ function getWeekdayIdFromText(value) {
     sunday: "sun",
   };
   return map[normalized] || "";
+}
+
+function getWeekdayHeaderId(value) {
+  const text = normalizeText(value)
+    .replace(/[()（）［］\[\]【】]/g, "")
+    .replace(/曜日/g, "曜");
+  const candidates = weekdays.map((weekday) => ({
+    id: weekday.id,
+    label: weekday.label,
+    pattern: new RegExp(`^${weekday.label}(曜)?(利用|来所|通所|予定|帰り|帰宅|送迎|区分|時間)?$`),
+  }));
+  return candidates.find((candidate) => text === candidate.label || candidate.pattern.test(text))?.id || "";
 }
 
 function formatWeeklyScheduleSummary(schedule) {

@@ -354,10 +354,10 @@
               <details class="bulk-import-panel" open>
                 <summary>Excel一覧からまとめて登録</summary>
                 <div class="bulk-import-body">
-                  <p>Excelから表をコピーして貼り付けるか、CSVファイルを選んでください。列は「利用者名、住所、人数、車いす、何時以降、何時まで、利用曜日、帰り区分、備考」の順で取り込めます。曜日は「月,水,金」または「月:通常,水:13:30」のように入力できます。</p>
+                  <p>Excelから表をコピーして貼り付けるか、CSV/Excelファイルを選んでください。列は「利用者名、住所、人数、車いす、何時以降、何時まで、利用曜日、帰り区分、備考」の順で取り込めます。曜日は「月,水,金」「月:通常,水:13:30」、または「月・火・水」の曜日別列に1=通常、2=13:30帰りとして入力できます。</p>
                   <textarea id="bulkImportText" rows="7" placeholder="利用者名&#9;住所&#9;人数&#9;車いす&#9;何時以降&#9;何時まで&#9;利用曜日&#9;帰り区分&#9;備考&#10;田中様&#9;川崎市川崎区大師町10-6&#9;1&#9;なし&#9;&#9;&#9;月,水,金&#9;通常&#9;玄関前で声かけ"></textarea>
                   <div class="bulk-import-tools">
-                    <input id="bulkImportFile" type="file" accept=".csv,.txt,text/csv,text/plain" />
+                    <input id="bulkImportFile" type="file" accept=".xlsx,.xls,.csv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/plain" />
                     <label class="check-line compact-check">
                       <input id="bulkAddToRoute" type="checkbox" checked />
                       <span>登録後、今日の送迎にも追加</span>
@@ -379,6 +379,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
     <script src="./app.js"></script>
   </body>
 </html>
