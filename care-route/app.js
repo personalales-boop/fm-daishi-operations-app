@@ -2005,8 +2005,7 @@ function addPatientToTodayRoute(patient) {
 function parseBulkPatients(rawText) {
   const lines = String(rawText || "")
     .replace(/\r\n?/g, "\n")
-    .split("\n")
-    .map((line) => line.trim());
+    .split("\n");
   const delimiter = lines.some((line) => line.includes("\t")) ? "\t" : ",";
   const rows = lines
     .map((line) => delimiter === "\t" ? line.split("\t") : parseCsvLine(line))
@@ -2032,8 +2031,9 @@ function parseBulkPatientRows(rows) {
       return;
     }
 
-    if (looksLikeBulkHeader(normalizedColumns)) {
-      headerMap = createBulkHeaderMap(normalizedColumns);
+    const nextHeaderMap = createBulkHeaderMap(normalizedColumns, headerMap);
+    if (nextHeaderMap.rowScore >= 2 || (headerMap && nextHeaderMap.rowWeekdayScore >= 2)) {
+      headerMap = nextHeaderMap;
       return;
     }
 
@@ -2085,61 +2085,136 @@ function parseCsvLine(line) {
 }
 
 function looksLikeBulkHeader(columns) {
-  const headerScore = createBulkHeaderMap(columns).score || 0;
+  const headerScore = createBulkHeaderMap(columns).rowScore || 0;
   return headerScore >= 2;
 }
 
-function createBulkHeaderMap(columns) {
-  const map = { weekdayColumns: {}, score: 0 };
+function createBulkHeaderMap(columns, previousMap = null) {
+  const map = cloneBulkHeaderMap(previousMap);
+  map.rowScore = 0;
+  map.rowWeekdayScore = 0;
+  const rowReturnTypeHints = getBulkReturnTypeHints(columns);
+  Object.entries(rowReturnTypeHints).forEach(([index, returnType]) => {
+    map.weekdayReturnTypeByColumn[Number(index)] = returnType;
+  });
+
   columns.forEach((column, index) => {
     const value = normalizeText(column);
     if (!value) return;
     const weekdayId = getWeekdayHeaderId(value);
     if (weekdayId) {
-      map.weekdayColumns[weekdayId] = index;
-      map.score += 1;
+      addBulkWeekdayColumn(map, weekdayId, index, map.weekdayReturnTypeByColumn[index] || rowReturnTypeHints[index] || "");
+      map.rowScore += 1;
+      map.rowWeekdayScore += 1;
       return;
     }
-    if (/^(利用者名|利用者氏名|利用者|氏名|名前|お名前|患者名|患者|利用者様|患者様)$/.test(value)) {
+    const returnType = normalizeHeaderReturnType(value);
+    if (returnType) {
+      map.weekdayReturnTypeByColumn[index] = returnType;
+      map.rowScore += 1;
+    } else if (/^(利用者名|利用者氏名|利用者一覧|利用者|氏名|名前|お名前|患者名|患者|利用者様|患者様)$/.test(value)) {
       map.name = index;
-      map.score += 2;
-    } else if (/住所|所在地|送迎先|自宅|居宅|住まい/.test(value)) {
-      map.address = index;
-      map.score += 2;
+      map.rowScore += 2;
+    } else if (/^(住所|住所1|住所2|住所１|住所２|所在地|送迎先|自宅住所|居宅住所|住まい)$/.test(value)) {
+      if (!map.addressColumns.includes(index)) map.addressColumns.push(index);
+      if (map.address === undefined) map.address = index;
+      map.rowScore += 2;
     } else if (/人数|利用人数|座席人数|乗車人数|同乗/.test(value)) {
       map.passengers = index;
-      map.score += 1;
+      map.rowScore += 1;
     } else if (/車いす|車イス|車椅子|車イス|wheelchair|^wc$/i.test(value)) {
       map.wheelchair = index;
-      map.score += 1;
-    } else if (/何時以降|希望開始|開始希望|迎え以降|送り以降|以降|開始/.test(value)) {
+      map.rowScore += 1;
+    } else if (/何時以降|希望開始|開始希望|迎え以降|迎え時間|迎車時間|送り以降|以降|開始/.test(value)) {
       map.earliest = index;
-      map.score += 1;
-    } else if (/何時まで|希望終了|終了希望|迎えまで|送りまで|まで|終了/.test(value)) {
+      map.rowScore += 1;
+    } else if (/何時まで|希望終了|終了希望|迎えまで|送りまで|送り時間|帰り時間|まで|終了/.test(value)) {
       map.latest = index;
-      map.score += 1;
+      map.rowScore += 1;
     } else if (/利用曜日|来所曜日|通所曜日|予定曜日|利用日|通所日|来所日|週間利用|一週間|1週間/.test(value)) {
       map.weekdays = index;
-      map.score += 1;
+      map.rowScore += 1;
     } else if (/帰り区分|帰宅区分|帰り時間|帰宅時間|帰り|帰宅|送迎区分|通常早帰り/.test(value)) {
       map.returnType = index;
-      map.score += 1;
+      map.rowScore += 1;
     } else if (/備考|メモ|注意|連絡事項|特記事項|申し送り|引継|引き継ぎ/.test(value)) {
       map.note = index;
-      map.score += 1;
+      map.rowScore += 1;
     }
   });
+  map.score = (previousMap?.score || 0) + map.rowScore;
   return map;
 }
 
+function cloneBulkHeaderMap(previousMap) {
+  if (!previousMap) {
+    return {
+      weekdayColumns: {},
+      weekdayReturnTypeByColumn: {},
+      addressColumns: [],
+      score: 0,
+      rowScore: 0,
+      rowWeekdayScore: 0,
+    };
+  }
+  return {
+    ...previousMap,
+    weekdayColumns: Object.fromEntries(
+      Object.entries(previousMap.weekdayColumns || {}).map(([weekdayId, entries]) => [
+        weekdayId,
+        Array.isArray(entries) ? entries.map((entry) => ({ ...entry })) : [{ index: entries, returnType: "" }],
+      ]),
+    ),
+    weekdayReturnTypeByColumn: { ...(previousMap.weekdayReturnTypeByColumn || {}) },
+    addressColumns: [...(previousMap.addressColumns || [])],
+  };
+}
+
+function getBulkReturnTypeHints(columns) {
+  const hints = {};
+  const groups = columns
+    .map((column, index) => ({ index, returnType: normalizeHeaderReturnType(column), value: normalizeText(column) }))
+    .filter((item) => item.returnType);
+  groups.forEach((group, groupIndex) => {
+    const nextGroupIndex = groups[groupIndex + 1]?.index ?? columns.length;
+    for (let index = group.index; index < nextGroupIndex; index += 1) {
+      const value = normalizeText(columns[index]);
+      if (index !== group.index && value && !getWeekdayHeaderId(value)) break;
+      hints[index] = group.returnType;
+    }
+  });
+  return hints;
+}
+
+function addBulkWeekdayColumn(map, weekdayId, index, returnType = "") {
+  if (!Array.isArray(map.weekdayColumns[weekdayId])) map.weekdayColumns[weekdayId] = [];
+  if (map.weekdayColumns[weekdayId].some((entry) => entry.index === index)) return;
+  map.weekdayColumns[weekdayId].push({ index, returnType });
+  map.weekdayReturnTypeByColumn[index] = returnType;
+}
+
+function normalizeHeaderReturnType(value) {
+  const text = normalizeText(value).toLowerCase();
+  if (!text) return "";
+  if (/^(通常|普通|標準|通常帰り|普通帰り)$/.test(text)) return "normal";
+  if (/^(半日|半日帰り|早帰り|短時間|午後|13時半|13:30|1330)$/.test(text)) return "early";
+  return "";
+}
+
 function normalizeBulkPatientRow(columns, headerMap) {
-  const pick = (key, fallbackIndex) => columns[headerMap?.[key] ?? fallbackIndex] || "";
+  const pick = (key, fallbackIndex) => {
+    if (headerMap) return columns[headerMap[key] ?? -1] || "";
+    return columns[fallbackIndex] || "";
+  };
+  const address = headerMap?.addressColumns?.length
+    ? headerMap.addressColumns.map((index) => columns[index]).filter(Boolean).join(" ").trim()
+    : pick("address", 1).trim();
   const textSchedule = parseWeeklyScheduleText(pick("weekdays", 6), pick("returnType", 7));
   const weekdayColumnSchedule = parseWeekdayColumnSchedule(columns, headerMap);
   return {
     id: makeId(),
     name: pick("name", 0).trim(),
-    address: pick("address", 1).trim(),
+    address,
     passengers: normalizePassengerCount(pick("passengers", 2)),
     wheelchair: normalizeWheelchairValue(pick("wheelchair", 3)),
     earliest: normalizeTimeValue(pick("earliest", 4)),
@@ -2152,16 +2227,21 @@ function normalizeBulkPatientRow(columns, headerMap) {
 function parseWeekdayColumnSchedule(columns, headerMap) {
   const schedule = {};
   Object.entries(headerMap?.weekdayColumns || {}).forEach(([weekdayId, index]) => {
-    const returnType = normalizeWeekdayCellReturnType(columns[index]);
-    if (returnType) schedule[weekdayId] = returnType;
+    const entries = Array.isArray(index) ? index : [{ index, returnType: "" }];
+    entries.forEach((entry) => {
+      const returnType = normalizeWeekdayCellReturnType(columns[entry.index], entry.returnType);
+      if (returnType) schedule[weekdayId] = returnType;
+    });
   });
   return schedule;
 }
 
-function normalizeWeekdayCellReturnType(value) {
+function normalizeWeekdayCellReturnType(value, defaultReturnType = "") {
   const text = String(value || "").trim();
   if (!text || /^(なし|無|休|休み|欠席|×|x|no|false|-|ー|－)$/i.test(text)) return "";
-  return normalizeReturnType(text) || "normal";
+  const normalized = normalizeText(text).toLowerCase();
+  if (defaultReturnType && /^(1|あり|有|○|◯|〇|true|yes|ok)$/.test(normalized)) return defaultReturnType;
+  return normalizeReturnType(text) || defaultReturnType || "normal";
 }
 
 function normalizePassengerCount(value) {
@@ -2251,7 +2331,7 @@ function parseWeeklyScheduleText(weekdaysText, returnTypeText) {
 function normalizeReturnType(value) {
   const text = String(value || "").trim().toLowerCase();
   if (!text) return "";
-  if (text === "early" || text === "2" || /13|早|短|午後/.test(text)) return "early";
+  if (text === "early" || text === "2" || /13|早|短|半|午後/.test(text)) return "early";
   if (text === "normal" || text === "1" || /16|通常|普通|標準/.test(text)) return "normal";
   return returnTypes[text] ? text : "";
 }
