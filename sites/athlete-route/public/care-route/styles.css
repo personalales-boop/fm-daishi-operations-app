@@ -226,6 +226,64 @@ button {
   padding: 18px;
 }
 
+.operator-guide {
+  max-width: 1180px;
+  margin: 14px auto 0;
+  padding: 0 18px;
+}
+
+.operator-guide details {
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #cfe0f2;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(30, 48, 68, 0.08);
+}
+
+.operator-guide summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 62px;
+  padding: 12px 16px;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+
+.operator-guide summary::-webkit-details-marker {
+  display: none;
+}
+
+.operator-guide summary span {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  color: #0757a8;
+  background: #eaf4ff;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.operator-guide summary strong {
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.operator-guide ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0 18px 18px 42px;
+  color: var(--ink);
+  font-weight: 850;
+  line-height: 1.65;
+}
+
 .app-tab-panel[hidden] {
   display: none;
 }
@@ -603,6 +661,26 @@ select:focus {
   border-color: #c6e4d9;
 }
 
+.roster-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.roster-counts span {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid #c6e4d9;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
 .roster-empty strong,
 .roster-summary strong,
 .roster-row strong {
@@ -632,9 +710,31 @@ select:focus {
   opacity: 0.72;
 }
 
+.roster-row.is-added {
+  border-left-color: var(--green);
+  background: #f3fbf8;
+}
+
 .roster-controls {
   display: grid;
   gap: 8px;
+}
+
+.roster-action-box {
+  display: grid;
+  grid-template-columns: minmax(150px, auto) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  background: #f7fbff;
+  border: 1px solid #d7e8fb;
+  border-radius: 12px;
+}
+
+.roster-action-box span {
+  margin-top: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 
 .roster-time-grid {
@@ -649,6 +749,11 @@ select:focus {
 
 .roster-status {
   color: var(--green);
+}
+
+.warning-text {
+  color: var(--red);
+  font-weight: 950;
 }
 
 .weekly-schedule {
@@ -794,6 +899,13 @@ select:focus {
   color: #ffffff;
   background: var(--blue);
   border: 1px solid var(--blue);
+}
+
+.call-button:disabled {
+  cursor: not-allowed;
+  color: #657384;
+  background: #e6ebf1;
+  border-color: #d7dde5;
 }
 
 .edit-button {
@@ -1278,9 +1390,14 @@ button:focus-visible {
 
 @media (max-width: 1180px) {
   .operator-dashboard,
+  .operator-guide,
   .global-status {
     margin-right: 18px;
     margin-left: 18px;
+  }
+
+  .operator-guide {
+    padding: 0;
   }
 
   .quick-start-grid,
@@ -1321,6 +1438,7 @@ button:focus-visible {
   }
 
   .operator-dashboard,
+  .operator-guide,
   .global-status {
     margin-right: 12px;
     margin-left: 12px;
@@ -1381,10 +1499,15 @@ button:focus-visible {
   .extra-roster-tools,
   .roster-row,
   .roster-time-grid,
+  .roster-action-box,
   .weekday-schedule-grid,
   .patient-card-controls,
   .route-action-row,
   .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .operator-guide summary {
     grid-template-columns: 1fr;
   }
 

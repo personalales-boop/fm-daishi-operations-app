@@ -50,7 +50,7 @@
       <nav class="app-nav" role="tablist" aria-label="介護送迎メニュー">
         <button class="app-tab active" id="planTab" type="button" role="tab" aria-controls="planPanel" aria-selected="true" data-app-tab="plan">1 今日の送迎</button>
         <button class="app-tab" id="mapTab" type="button" role="tab" aria-controls="mapPanel" aria-selected="false" data-app-tab="map">2 地図・配車表</button>
-        <button class="app-tab" id="customersTab" type="button" role="tab" aria-controls="customersPanel" aria-selected="false" data-app-tab="customers">3 利用者名簿</button>
+        <button class="app-tab" id="customersTab" type="button" role="tab" aria-controls="customersPanel" aria-selected="false" data-app-tab="customers">3 利用者登録・CSV</button>
       </nav>
       <p class="global-status" id="statusText">患者様を入力して、車両を選んでください。</p>
 
@@ -111,6 +111,22 @@
         </div>
       </section>
 
+      <section class="operator-guide" aria-label="操作ガイド">
+        <details>
+          <summary>
+            <span>初めて操作する方へ</span>
+            <strong>今日の送迎は「確認 → 追加 → ルート作成」の順番です</strong>
+          </summary>
+          <ol>
+            <li>「今日の搭乗者一覧」で、対象日と曜日を確認します。</li>
+            <li>来ない方は「本日来ない」にチェックします。早帰りや時間指定もここで直します。</li>
+            <li>乗せる方だけ「この方を追加」を押します。全員を一括で入れたい場合だけ、まとめて反映ボタンを使います。</li>
+            <li>必要に応じて車両を分けてから「ルートを作る」を押します。</li>
+            <li>「地図・配車表」で車両別の配車表をCSV、コピー、印刷で出します。</li>
+          </ol>
+        </details>
+      </section>
+
       <main class="workspace">
         <section class="app-tab-panel active" id="planPanel" role="tabpanel" aria-labelledby="planTab" data-app-panel="plan">
           <section class="control-panel route-entry-panel" aria-label="送迎登録">
@@ -166,7 +182,7 @@
                 <span class="step-badge">3</span>
                 <div>
                   <p>今日の搭乗者一覧</p>
-                  <h2>曜日予定から作成</h2>
+                  <h2>曜日予定から乗る方を選ぶ</h2>
                 </div>
               </div>
               <div class="roster-toolbar">
@@ -178,15 +194,15 @@
               </div>
               <div class="extra-roster-tools">
                 <label>
-                  <span>当日だけ追加する利用者</span>
+                  <span id="extraTodayPatientLabel">予定外・振替で来る利用者</span>
                   <select id="extraTodayPatientSelect">
-                    <option value="">登録済み顧客から選択</option>
+                    <option value="">登録済み利用者から選択</option>
                   </select>
                 </label>
-                <button class="ghost-button" id="addExtraTodayPatientButton" type="button">この人を追加</button>
+                <button class="ghost-button" id="addExtraTodayPatientButton" type="button">この方を一覧に追加</button>
               </div>
               <div class="today-roster-list" id="todayRosterList"></div>
-              <button class="secondary-button" id="applyTodayRosterButton" type="button">この一覧を今日の送迎に入れる</button>
+              <button class="secondary-button" id="applyTodayRosterButton" type="button">表示中の搭乗者をまとめて送迎に反映</button>
             </section>
 
             <section class="panel-card">
