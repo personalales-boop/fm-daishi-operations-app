@@ -24,6 +24,7 @@ body {
   color: var(--text);
   background: var(--bg);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  font-size: 16px;
 }
 
 button,
@@ -204,11 +205,13 @@ button {
 }
 
 .app-tab {
-  min-height: 48px;
+  min-height: 56px;
+  padding: 0 12px;
   color: var(--ink);
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 14px;
+  font-size: 1rem;
   font-weight: 950;
 }
 
@@ -229,7 +232,7 @@ button {
 
 .route-entry-panel,
 .customer-panel {
-  max-width: 760px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
@@ -254,7 +257,7 @@ button {
 }
 
 .panel-card {
-  padding: 16px;
+  padding: 20px;
 }
 
 .section-title {
@@ -266,14 +269,14 @@ button {
 
 .section-title h2 {
   color: var(--ink);
-  font-size: 1.06rem;
+  font-size: 1.18rem;
 }
 
 .step-badge {
   display: grid;
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
   place-items: center;
   color: #ffffff;
   background: var(--blue);
@@ -323,17 +326,17 @@ button {
 
 label span {
   display: block;
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   color: var(--ink);
-  font-size: 0.86rem;
+  font-size: 0.96rem;
   font-weight: 900;
 }
 
 input,
 textarea {
   width: 100%;
-  min-height: 48px;
-  padding: 10px 12px;
+  min-height: 56px;
+  padding: 12px 14px;
   color: var(--ink);
   background: #ffffff;
   border: 1px solid #cfd8e3;
@@ -348,8 +351,8 @@ textarea {
 
 select {
   width: 100%;
-  min-height: 48px;
-  padding: 10px 12px;
+  min-height: 56px;
+  padding: 12px 14px;
   color: var(--ink);
   background: #ffffff;
   border: 1px solid #cfd8e3;
@@ -443,7 +446,7 @@ select:focus {
 .secondary-button,
 .ghost-button {
   display: inline-flex;
-  min-height: 48px;
+  min-height: 56px;
   align-items: center;
   justify-content: center;
   padding: 0 18px;
@@ -456,7 +459,7 @@ select:focus {
   color: #ffffff;
   background: var(--blue);
   border: 1px solid var(--blue);
-  font-size: 1.08rem;
+  font-size: 1.18rem;
 }
 
 .primary-button:hover {
@@ -488,7 +491,7 @@ select:focus {
 }
 
 .ghost-button.compact {
-  min-height: 40px;
+  min-height: 48px;
 }
 
 .full-button {
@@ -806,17 +809,199 @@ select:focus {
 }
 
 .global-status {
-  max-width: 760px;
-  min-height: 40px;
-  margin: 10px auto 0;
-  padding: 10px 14px;
+  max-width: 1180px;
+  min-height: 48px;
+  margin: 12px auto 0;
+  padding: 12px 16px;
   color: var(--muted);
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 14px;
-  font-size: 0.86rem;
+  font-size: 0.96rem;
   font-weight: 800;
   line-height: 1.5;
+}
+
+.operator-dashboard {
+  display: grid;
+  gap: 14px;
+  max-width: 1180px;
+  margin: 14px auto 0;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.dashboard-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.34rem;
+  line-height: 1.25;
+}
+
+.dashboard-date {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 14px;
+  color: #17446f;
+  background: #eaf4ff;
+  border: 1px solid #b8d9f7;
+  border-radius: 999px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dashboard-metrics div {
+  min-height: 78px;
+  padding: 12px;
+  background: #f5f8fb;
+  border: 1px solid #dce5ef;
+  border-radius: 14px;
+}
+
+.dashboard-metrics span,
+.quick-start-button > span:last-child,
+.workflow-step small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.dashboard-metrics strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 1.22rem;
+  line-height: 1.2;
+}
+
+.dashboard-metrics .needs-check strong {
+  color: var(--red);
+}
+
+.quick-start-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quick-start-button,
+.workflow-step {
+  appearance: none;
+  text-align: left;
+  color: var(--ink);
+  background: #ffffff;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+}
+
+.quick-start-button {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 6px 10px;
+  min-height: 118px;
+  padding: 14px;
+}
+
+.quick-start-button.primary-action {
+  border-color: var(--blue);
+  background: #eef7ff;
+}
+
+.quick-start-button:focus-visible,
+.workflow-step:focus-visible,
+.app-tab:focus-visible,
+button:focus-visible {
+  outline: 4px solid rgba(11, 114, 217, 0.24);
+  outline-offset: 2px;
+}
+
+.quick-number {
+  display: grid;
+  grid-row: span 2;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  color: #ffffff;
+  background: var(--blue);
+  border-radius: 50%;
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+.quick-start-button strong {
+  display: block;
+  color: var(--ink);
+  font-size: 1.04rem;
+  line-height: 1.35;
+}
+
+.workflow-stepper {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.workflow-step {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 2px 8px;
+  min-height: 70px;
+  padding: 10px;
+}
+
+.workflow-step span {
+  display: grid;
+  grid-row: span 2;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--blue);
+  background: #eaf4ff;
+  border-radius: 50%;
+  font-weight: 950;
+}
+
+.workflow-step strong {
+  color: var(--ink);
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.focus-pulse {
+  animation: focusPulse 1.2s ease-out;
+}
+
+@keyframes focusPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(11, 114, 217, 0.34);
+  }
+
+  65% {
+    box-shadow: 0 0 0 10px rgba(11, 114, 217, 0.12);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(11, 114, 217, 0);
+  }
 }
 
 .map-panel {
@@ -1069,6 +1254,47 @@ select:focus {
   background: var(--green);
 }
 
+@media (min-width: 900px) {
+  .route-entry-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .route-entry-panel .panel-card:nth-child(3),
+  .route-entry-panel .panel-card:nth-child(4),
+  .route-entry-panel .action-card {
+    grid-column: 1 / -1;
+  }
+
+  .customer-panel {
+    grid-template-columns: minmax(360px, 0.8fr) minmax(0, 1.2fr);
+    align-items: start;
+  }
+
+  .customer-panel .panel-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1180px) {
+  .operator-dashboard,
+  .global-status {
+    margin-right: 18px;
+    margin-left: 18px;
+  }
+
+  .quick-start-grid,
+  .dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workflow-stepper {
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+}
+
 @media (max-width: 980px) {
   .security-panel,
   .login-form {
@@ -1094,20 +1320,62 @@ select:focus {
     padding: 12px;
   }
 
+  .operator-dashboard,
+  .global-status {
+    margin-right: 12px;
+    margin-left: 12px;
+  }
+
+  .operator-dashboard {
+    padding: 12px;
+  }
+
+  .dashboard-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-date {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .quick-start-grid {
+    order: 2;
+  }
+
+  .dashboard-metrics {
+    order: 3;
+  }
+
+  .workflow-stepper {
+    order: 4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .workflow-stepper .workflow-step:last-child {
+    grid-column: 1 / -1;
+  }
+
   .app-nav {
-    gap: 6px;
+    position: static;
+    grid-template-columns: 1fr;
+    gap: 8px;
     padding: 8px 12px;
   }
 
   .app-tab {
-    min-height: 44px;
-    padding: 0 8px;
-    font-size: 0.88rem;
+    min-height: 52px;
+    padding: 0 10px;
+    font-size: 0.96rem;
   }
 
   .form-row,
   .vehicle-grid,
   .quick-actions,
+  .quick-start-grid,
+  .dashboard-metrics,
   .bulk-import-tools,
   .roster-toolbar,
   .extra-roster-tools,
@@ -1158,6 +1426,7 @@ select:focus {
   .security-panel,
   .app-nav,
   .global-status,
+  .operator-dashboard,
   .route-map,
   .map-toolbar,
   .result-panel,

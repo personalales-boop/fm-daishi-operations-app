@@ -150,6 +150,12 @@ const els = {
   downloadDispatchCsvButton: document.getElementById("downloadDispatchCsvButton"),
   printDispatchSheetButton: document.getElementById("printDispatchSheetButton"),
   statusText: document.getElementById("statusText"),
+  dashboardDate: document.getElementById("dashboardDate"),
+  dashboardRosterCount: document.getElementById("dashboardRosterCount"),
+  dashboardRouteCount: document.getElementById("dashboardRouteCount"),
+  dashboardVehicle: document.getElementById("dashboardVehicle"),
+  dashboardIssueCount: document.getElementById("dashboardIssueCount"),
+  quickActionButtons: document.querySelectorAll("[data-quick-action]"),
   fitMapButton: document.getElementById("fitMapButton"),
   resultPanel: document.getElementById("resultPanel"),
 };
@@ -184,6 +190,7 @@ async function boot() {
   renderRegisteredPatients();
   renderTodayRoster();
   renderDispatchSheet();
+  renderDashboard();
   syncAutoRefresh();
   await initSecureBackend();
 }
@@ -276,6 +283,9 @@ function bindEvents() {
       persist();
       renderAppTabs();
     });
+  });
+  els.quickActionButtons.forEach((button) => {
+    button.addEventListener("click", handleQuickAction);
   });
   els.clearPatientsButton.addEventListener("click", clearPatients);
   els.patientList.addEventListener("click", removePatient);
@@ -599,7 +609,7 @@ function logout() {
   lockAppForLogin("ログインしてください。");
 }
 
-function renderAppTabs() {
+function renderAppTabs(options = {}) {
   const activeTab = ["plan", "map", "customers"].includes(state.activeAppTab) ? state.activeAppTab : "plan";
   els.appTabs.forEach((tab) => {
     const isActive = tab.dataset.appTab === activeTab;
@@ -611,7 +621,9 @@ function renderAppTabs() {
     panel.classList.toggle("active", isActive);
     panel.hidden = !isActive;
   });
-  window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+  if (options.scroll !== false) {
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
+  }
 
   if (activeTab === "map") {
     window.setTimeout(() => {
@@ -619,6 +631,61 @@ function renderAppTabs() {
       fitRouteBounds();
     }, 80);
   }
+  renderDashboard();
+}
+
+function handleQuickAction(event) {
+  const action = event.currentTarget.dataset.quickAction;
+  const targets = {
+    today: { tab: "plan", selector: "#todayRosterList", status: "今日の搭乗者一覧を確認してください。" },
+    customers: { tab: "customers", selector: "#customersPanel .panel-card", status: "利用者名簿を登録・確認できます。" },
+    route: { tab: "plan", selector: "#optimizeButton", status: "送迎対象と車両を確認して、ルートを作れます。" },
+    dispatch: { tab: "map", selector: "#dispatchSheetPanel", status: "配車表のコピー・CSV・印刷ができます。" },
+  };
+  const target = targets[action];
+  if (!target) return;
+
+  state.activeAppTab = target.tab;
+  persist();
+  renderAppTabs({ scroll: false });
+  setStatus(target.status);
+
+  window.setTimeout(() => {
+    const element = document.querySelector(target.selector);
+    if (!element) return;
+    const stickyOffset = (document.querySelector(".app-nav")?.getBoundingClientRect().height || 72) + 18;
+    const top = element.getBoundingClientRect().top + window.scrollY - stickyOffset;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    element.classList.add("focus-pulse");
+    window.setTimeout(() => element.classList.remove("focus-pulse"), 1200);
+  }, target.tab === "map" ? 160 : 80);
+}
+
+function renderDashboard() {
+  if (!els.dashboardDate) return;
+  const date = state.serviceDate || getTodayIsoDate();
+  const weekday = getWeekdayForDate(date);
+  const rosterEntries = currentUser ? getTodayRosterEntries(date) : [];
+  const activeRosterCount = rosterEntries.filter((entry) => !entry.absent).length;
+  const vehicle = getVehicle();
+  const issues = getDashboardIssues(vehicle);
+
+  els.dashboardDate.textContent = `${formatDateForRoster(date)}（${weekday.label}）`;
+  els.dashboardRosterCount.textContent = currentUser ? `${activeRosterCount}名` : "ログイン後";
+  els.dashboardRouteCount.textContent = `${state.patients.length}名`;
+  els.dashboardVehicle.textContent = state.patients.length ? `${vehicle.name} / ${getCapacitySummary(vehicle)}` : vehicle.name;
+  els.dashboardIssueCount.textContent = issues.length ? `${issues.length}件` : "なし";
+  els.dashboardIssueCount.parentElement?.classList.toggle("needs-check", issues.length > 0);
+}
+
+function getDashboardIssues(vehicle) {
+  const issues = [];
+  if (!state.patients.length) return issues;
+  if (getSeatedPassengers() > vehicle.capacity) issues.push("座席定員");
+  if (getWheelchairCount() > (vehicle.wheelchairCapacity || 0)) issues.push("車いす台数");
+  if (state.patients.some((patient) => patient.wheelchair) && !vehicle.wheelchair) issues.push("車いす対応車");
+  if (state.patients.some((patient) => patient.earliest && patient.latest && timeToMinutes(patient.earliest) > timeToMinutes(patient.latest))) issues.push("時間指定");
+  return issues;
 }
 
 function addPatient(event) {
@@ -984,6 +1051,7 @@ function renderDispatchSheet() {
   [els.copyDispatchSheetButton, els.downloadDispatchCsvButton, els.printDispatchSheetButton].forEach((button) => {
     if (button) button.disabled = !hasRows;
   });
+  renderDashboard();
 
   if (!hasRows) {
     els.dispatchSheetBody.innerHTML = `
@@ -1200,6 +1268,7 @@ function renderTodayRoster() {
         <span>登録済み顧客の基本曜日から、対象日の一覧を作成します。</span>
       </div>
     `;
+    renderDashboard();
     return;
   }
 
@@ -1210,6 +1279,7 @@ function renderTodayRoster() {
         <span>顧客登録で利用曜日を設定するか、「当日だけ追加する利用者」から追加してください。</span>
       </div>
     `;
+    renderDashboard();
     return;
   }
 
@@ -1258,6 +1328,7 @@ function renderTodayRoster() {
       </article>
     `).join("")}
   `;
+  renderDashboard();
 }
 
 function getTodayRosterEntries(date = state.serviceDate || getTodayIsoDate()) {
@@ -2817,7 +2888,7 @@ function resolveStartLocationForMap() {
 
 function setBusy(isBusy, message = "") {
   els.optimizeButton.disabled = isBusy;
-  els.optimizeButton.textContent = isBusy ? "作成中..." : "最速ルートを作成";
+  els.optimizeButton.textContent = isBusy ? "ルート作成中..." : "ルートを作る";
   if (message) setStatus(message);
 }
 

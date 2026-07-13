@@ -42,8 +42,10 @@ test("bundles the care route app assets", async () => {
   ]);
 
   assert.match(indexHtml, /<h1>Athlete 送迎ルート<\/h1>/);
-  assert.match(indexHtml, /CSV・Excel一覧からまとめて登録/);
+  assert.match(indexHtml, /最初にここから選びます/);
+  assert.match(indexHtml, /名簿ファイルを読み込む（CSV\/Excel）/);
   assert.match(indexHtml, /CSV\/Excelファイルは選択すると自動登録されます/);
   assert.match(appJs, /loadBulkImportFile/);
+  assert.match(appJs, /handleQuickAction/);
   assert.match(appJs, /顧客名簿とプルダウンへ反映しました/);
 });
